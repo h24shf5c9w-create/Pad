@@ -13,6 +13,9 @@
   var selDirty = false;
   var pendingRestore = null;   // bytes kept for a post-gesture decode retry
 
+  var IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
   var WAVE_BASE = '#3b3b47';
   var WAVE_SEL = '#35d9a0';
 
@@ -171,6 +174,9 @@
     LP.ui.setPhase('processing');
 
     LP.recorder.stop().then(function (result) {
+      /* Mic released: the next gesture rebuilds the context so iOS
+         routes playback back to the speaker. */
+      LP.audio.markSessionDirty();
       if (result.kind === 'pcm') {
         var buf = LP.audio.bufferFromChunks(result.chunks, result.length, result.sampleRate);
         if (!buf) throw new Error('empty-recording');
@@ -244,6 +250,9 @@
 
     dom.recTime.textContent = LP.ui.formatTime(buffer.duration);
     LP.ui.setPhase('ready', 'Ready · ' + buffer.duration.toFixed(1) + 's recorded');
+    if (IS_IOS) {
+      LP.ui.showSoundHint('No sound? Flip the silent switch on the side of your iPhone and turn the volume up.');
+    }
 
     drawWaveforms();
     if (state.mode === 'customize') LP.editor.openPad(state.activePad);
@@ -277,8 +286,10 @@
   /* ── Reset ────────────────────────────────────────────────── */
 
   function resetAll(keepStorage) {
+    if (LP.recorder.isRecording) LP.audio.markSessionDirty();
     LP.recorder.cancel();
     stopTimer();
+    LP.ui.hideSoundHint();
 
     state.buffer = null;
     state.duration = 0;

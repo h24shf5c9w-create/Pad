@@ -89,6 +89,10 @@
       LP.audio.play(LP.ui.state.buffer, slot.start, slot.duration);
     }
     flash(els[index]);
+    /* Cosmetic, and only after the audio call. */
+    if (slot && LP.audio.blocked) {
+      LP.ui.showSoundHint('Audio is still starting up — tap the pad once more.');
+    }
   }
 
   function flash(el) {

@@ -34,6 +34,18 @@ die 16 Pads.
 
 HINWEISE
 --------
+- KEIN TON AUF DEM IPHONE?
+  1. Stummschalter an der linken Geraeteseite ausschalten
+     (kein oranger Streifen sichtbar).
+  2. Lautstaerke mit den Tasten hochdrehen, waehrend die Seite
+     offen ist.
+  3. Einmal auf ein Pad tippen - Safari gibt Audio erst nach der
+     ersten Beruehrung frei.
+  Die App schaltet zusaetzlich selbst auf die Playback-Audiosession
+  um und baut den AudioContext nach jeder Aufnahme neu auf, damit
+  der Ton auf dem Lautsprecher landet und nicht im Hoerermuschel-
+  Ausgang haengen bleibt.
+
 - HTTPS ist Pflicht. Ohne sicheren Kontext gibt der Browser
   das Mikrofon nicht frei; die App zeigt dann einen Hinweis.
 - Die Aufnahme bleibt vollstaendig auf dem Geraet. Es wird

@@ -36,7 +36,7 @@
       'waveSel', 'selWindow', 'waveEmpty', 'editorControls', 'lenSelect',
       'btnPreview', 'btnSave', 'btnClearPad', 'editorHint', 'padGrid',
       'footHint', 'modal', 'modalBackdrop', 'modalTitle', 'modalBody',
-      'modalCancel', 'modalConfirm'
+      'modalCancel', 'modalConfirm', 'soundHint', 'soundHintText', 'soundHintClose'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
   }
 
@@ -143,6 +143,24 @@
     dom.footHint.textContent = text;
   }
 
+  /* ── Sound hint ─────────────────────────────────────────── */
+  var hintDismissed = false;
+
+  function showSoundHint(text) {
+    if (hintDismissed) return;
+    dom.soundHintText.textContent = text;
+    dom.soundHint.hidden = false;
+  }
+
+  function hideSoundHint() { dom.soundHint.hidden = true; }
+
+  function initSoundHint() {
+    dom.soundHintClose.addEventListener('click', function () {
+      hintDismissed = true;
+      hideSoundHint();
+    });
+  }
+
   /* ── Confirm dialog ─────────────────────────────────────── */
   var modalResolve = null;
   var lastFocus = null;
@@ -181,7 +199,9 @@
   LP.ui = {
     dom: dom,
     state: state,
-    init: function () { cacheDom(); initModal(); },
+    init: function () { cacheDom(); initModal(); initSoundHint(); },
+    showSoundHint: showSoundHint,
+    hideSoundHint: hideSoundHint,
     setPhase: setPhase,
     setStatus: setStatus,
     setBlocked: function (message) { state.blocked = message; setPhase(state.phase); },
