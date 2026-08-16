@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#08080a">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="PADLAB — a 16-pad mic sampler. Record, slice, play. Audio stays on your device.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PADLAB">
+<meta name="format-detection" content="telephone=no">
+<title>PADLAB — Mic Sampler</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1 class="brand-name">PADLAB</h1>
+    </div>
+    <p class="privacy">Audio stays on your device.</p>
+  </header>
+
+  <div class="banner" id="secureBanner" role="alert" hidden>
+    <strong>Microphone needs HTTPS.</strong>
+    <span>Open this page over a secure <code>https://</code> address to record.</span>
+  </div>
+
+  <!-- ── Recording ─────────────────────────────────────────── -->
+  <section class="card rec-card" aria-labelledby="recHeading">
+    <h2 class="sr-only" id="recHeading">Recording</h2>
+
+    <div class="rec-status">
+      <span class="rec-dot" id="recDot" data-state="idle" aria-hidden="true"></span>
+      <span class="rec-label" id="statusText" role="status" aria-live="polite">No recording yet</span>
+      <span class="rec-time mono" id="recTime" aria-hidden="true">0:00.0</span>
+    </div>
+
+    <div class="rec-actions">
+      <button type="button" class="btn btn-rec" id="btnRecord" aria-label="Start recording">
+        <span class="btn-glyph glyph-rec" aria-hidden="true"></span>
+        <span>Record</span>
+      </button>
+      <button type="button" class="btn btn-stop" id="btnStop" disabled aria-label="Stop recording">
+        <span class="btn-glyph glyph-stop" aria-hidden="true"></span>
+        <span>Stop</span>
+      </button>
+      <button type="button" class="btn btn-ghost" id="btnNew" disabled aria-label="Discard recording and clear all pads">
+        <span>New</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Mode switch ───────────────────────────────────────── -->
+  <div class="mode-switch" role="tablist" aria-label="Mode">
+    <button type="button" class="mode-btn is-active" id="modePlay" role="tab"
+            aria-selected="true" aria-controls="padGrid">Play</button>
+    <button type="button" class="mode-btn" id="modeCustomize" role="tab"
+            aria-selected="false" aria-controls="padGrid">Customize</button>
+  </div>
+
+  <!-- ── Waveform / sample editor ──────────────────────────── -->
+  <section class="card editor" id="editor" data-mode="play" hidden aria-labelledby="editorHeading">
+    <h2 class="sr-only" id="editorHeading">Sample editor</h2>
+
+    <div class="editor-head">
+      <span class="editor-pad" id="editorPadLabel">Recording</span>
+      <span class="editor-range mono" id="editorRange">0:00.00 &rarr; 0:00.00</span>
+    </div>
+
+    <div class="wave-wrap" id="waveWrap">
+      <canvas class="wave-canvas" id="waveBase" aria-hidden="true"></canvas>
+      <div class="sel" id="selWindow" role="slider" tabindex="0"
+           aria-label="Sample selection start"
+           aria-valuemin="0" aria-valuemax="0" aria-valuenow="0" aria-valuetext="0 seconds">
+        <div class="sel-clip"><canvas class="wave-canvas" id="waveSel" aria-hidden="true"></canvas></div>
+        <span class="sel-tag" aria-hidden="true">SAMPLE</span>
+      </div>
+      <p class="wave-empty" id="waveEmpty">Record something to see the waveform.</p>
+    </div>
+
+    <div class="editor-controls" id="editorControls">
+      <label class="field" for="lenSelect">
+        <span class="field-label">Length</span>
+        <select id="lenSelect" class="select">
+          <option value="0.1">0.1 s</option>
+          <option value="0.2">0.2 s</option>
+          <option value="0.5" selected>0.5 s</option>
+          <option value="1">1 s</option>
+          <option value="2">2 s</option>
+          <option value="3">3 s</option>
+          <option value="4">4 s</option>
+          <option value="5">5 s</option>
+        </select>
+      </label>
+      <button type="button" class="btn btn-ghost btn-sm" id="btnPreview" aria-label="Preview selected sample">
+        <span class="btn-glyph glyph-play" aria-hidden="true"></span><span>Preview</span>
+      </button>
+      <button type="button" class="btn btn-primary btn-sm" id="btnSave">Save to pad</button>
+    </div>
+
+    <div class="editor-foot">
+      <p class="hint" id="editorHint">Drag the highlighted window across the waveform.</p>
+      <button type="button" class="link-btn" id="btnClearPad" hidden>Clear pad</button>
+    </div>
+  </section>
+
+  <!-- ── Launchpad ─────────────────────────────────────────── -->
+  <section class="pad-section" aria-labelledby="padHeading">
+    <h2 class="sr-only" id="padHeading">Launchpad</h2>
+    <div class="pad-grid" id="padGrid" role="group" aria-label="16 sample pads"></div>
+  </section>
+
+  <footer class="app-foot">
+    <span id="footHint">Tap a pad to play.</span>
+  </footer>
+</div>
+
+<!-- ── Confirm dialog ──────────────────────────────────────── -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" id="modalBackdrop"></div>
+  <div class="modal-card" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody">
+    <h3 class="modal-title" id="modalTitle">Start over?</h3>
+    <p class="modal-body" id="modalBody">This clears the recording and empties all 16 pads.</p>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-ghost btn-sm" id="modalCancel">Cancel</button>
+      <button type="button" class="btn btn-danger btn-sm" id="modalConfirm">Clear all</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/audio-engine.js" defer></script>
+<script src="js/recorder.js" defer></script>
+<script src="js/waveform.js" defer></script>
+<script src="js/storage.js" defer></script>
+<script src="js/ui.js" defer></script>
+<script src="js/pads.js" defer></script>
+<script src="js/editor.js" defer></script>
+<script src="js/app.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "name": "PADLAB — Mic Sampler",
+  "short_name": "PADLAB",
+  "description": "Record with your microphone, slice samples and play them on a 16 pad launchpad. Audio stays on your device.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#08080a",
+  "theme_color": "#08080a",
+  "icons": [
+    { "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "assets/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+  ]
+}

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180" role="img" aria-label="PADLAB">
+  <rect width="180" height="180" rx="38" fill="#08080a"/>
+  <g fill="#1e1e27">
+    <rect x="25" y="25" width="25" height="25" rx="7"/><rect x="60" y="25" width="25" height="25" rx="7"/>
+    <rect x="95" y="25" width="25" height="25" rx="7"/><rect x="130" y="25" width="25" height="25" rx="7"/>
+    <rect x="25" y="60" width="25" height="25" rx="7"/><rect x="60" y="60" width="25" height="25" rx="7"/>
+    <rect x="95" y="60" width="25" height="25" rx="7"/><rect x="130" y="60" width="25" height="25" rx="7"/>
+    <rect x="25" y="95" width="25" height="25" rx="7"/><rect x="60" y="95" width="25" height="25" rx="7"/>
+    <rect x="95" y="95" width="25" height="25" rx="7"/><rect x="130" y="95" width="25" height="25" rx="7"/>
+    <rect x="25" y="130" width="25" height="25" rx="7"/><rect x="60" y="130" width="25" height="25" rx="7"/>
+    <rect x="95" y="130" width="25" height="25" rx="7"/><rect x="130" y="130" width="25" height="25" rx="7"/>
+  </g>
+  <g fill="#35d9a0">
+    <rect x="25" y="25" width="25" height="25" rx="7"/>
+    <rect x="60" y="60" width="25" height="25" rx="7"/>
+    <rect x="95" y="60" width="25" height="25" rx="7"/>
+    <rect x="60" y="95" width="25" height="25" rx="7"/>
+    <rect x="130" y="130" width="25" height="25" rx="7"/>
+  </g>
+</svg>
