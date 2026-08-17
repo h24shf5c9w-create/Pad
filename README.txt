@@ -31,9 +31,19 @@ CUSTOMIZE  - Pad antippen waehlt es aus. Danach das
 
 LAUTSTAERKE
 - Jedes Pad hat einen eigenen Regler von 0 bis 100 Prozent.
-- Neue Pads starten bei 100 Prozent, also rund dreimal so laut
-  wie die reine Aufnahme. Das gleicht leise Handymikrofone aus.
-- 30 Prozent entspricht dem unverstaerkten Originalpegel.
+- Neue Pads starten bei 30 Prozent. Das ist der unverstaerkte
+  Originalpegel der Aufnahme, damit der Regler nach oben Luft hat.
+- Nach oben geht es bis 100 Prozent = zehnfache Lautstaerke
+  (+20 dB). Das reicht aus, um sehr leise Handyaufnahmen auf
+  volle Lautstaerke zu bringen.
+
+      Regler    Verstaerkung
+        0 %     stumm
+       30 %     1.0x   (Standard, Originalpegel)
+       50 %     1.9x
+       70 %     3.7x
+      100 %     10.0x  (+20 dB)
+
 - 0 Prozent schaltet das Pad stumm; es wird dann als "muted"
   angezeigt.
 - Bei einem bereits belegten Pad wirkt der Regler sofort, ohne

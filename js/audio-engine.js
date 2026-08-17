@@ -16,30 +16,41 @@
   /* Short ramp on both ends so slicing mid-waveform doesn't click. */
   var FADE = 0.004;
 
-  /* Volume scale: pads are set in percent, and 30 % reproduces the
-     original 1:1 level, so 100 % is roughly 3.3x louder. Phone mic
-     recordings are quiet, which is what the headroom is for. */
+  /* Volume scale: pads are set in percent. 30 % reproduces the raw
+     recording level and is where pads start, so the slider has room
+     to go up rather than only down. Above that the scale runs in dB
+     up to 10x (+20 dB) at 100 %, which is what a quiet phone mic
+     recording needs to reach full level. */
   var REFERENCE_PERCENT = 30;
-  var DEFAULT_VOLUME = 100;
+  var DEFAULT_VOLUME = 30;
+  var MAX_GAIN = 10;
+  var MAX_DB = 20 * Math.log10(MAX_GAIN);
 
   function gainFor(volume) {
     var v = (volume === undefined || volume === null) ? DEFAULT_VOLUME : volume;
     if (!(v > 0)) return 0;
-    return (v > 100 ? 100 : v) / REFERENCE_PERCENT;
+    if (v > 100) v = 100;
+    if (v <= REFERENCE_PERCENT) return v / REFERENCE_PERCENT;
+    var dB = ((v - REFERENCE_PERCENT) / (100 - REFERENCE_PERCENT)) * MAX_DB;
+    return Math.pow(10, dB / 20);
   }
 
-  /* Zero-latency safety net for the boosted signal: transparent below
-     0.7, then a soft knee, so a loud recording saturates gently
-     instead of wrapping into harsh digital clipping. A compressor
-     would add lookahead latency, which pads cannot afford. */
-  function softClipCurve() {
-    var n = 2048, curve = new Float32Array(n), knee = 0.7;
+  /* Zero-latency safety net for the boosted signal. The shaper only
+     reads inputs in [-1, 1], so the bus is scaled down by MAX_GAIN
+     first and the curve maps that back to real amplitude. That keeps
+     the soft knee working across the whole boost range instead of
+     flat-topping everything above 1.0. Transparent below 0.7, then a
+     gentle knee to a 0.98 ceiling. A compressor would do this more
+     cleanly but adds lookahead latency, which pads cannot afford. */
+  var KNEE = 0.7, CEILING = 0.98;
+
+  function limiterCurve() {
+    var n = 4096, curve = new Float32Array(n), span = CEILING - KNEE;
     for (var i = 0; i < n; i++) {
       var x = (i * 2) / (n - 1) - 1;
-      var a = Math.abs(x);
-      curve[i] = a <= knee
-        ? x
-        : (x < 0 ? -1 : 1) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+      var a = Math.abs(x) * MAX_GAIN;
+      var y = a <= KNEE ? a : KNEE + span * Math.tanh((a - KNEE) / span);
+      curve[i] = x < 0 ? -y : y;
     }
     return curve;
   }
@@ -124,11 +135,15 @@
     master = ctx.createGain();
     master.gain.value = 1;
 
+    var preScale = ctx.createGain();
+    preScale.gain.value = 1 / MAX_GAIN;
+
     var limiter = ctx.createWaveShaper();
-    limiter.curve = softClipCurve();
+    limiter.curve = limiterCurve();
     limiter.oversample = 'none';        // oversampling would add latency
 
-    master.connect(limiter);
+    master.connect(preScale);
+    preScale.connect(limiter);
     limiter.connect(ctx.destination);
     return ctx;
   }

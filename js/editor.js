@@ -13,7 +13,7 @@
   var dom = null;
   var selStart = 0;         // seconds
   var reqLen = 0.5;         // requested length from the dropdown
-  var volume = 100;         // percent; 30 reproduces the unamplified level
+  var volume = 30;          // percent; 30 reproduces the unamplified level
   var effDur = 0.5;         // clamped to the recording length
   var curLeft = 0;          // px
   var selPx = 0;
@@ -114,7 +114,7 @@
   }
 
   function setVolume(v) {
-    volume = Math.max(0, Math.min(100, isNaN(v) ? 100 : v));
+    volume = Math.max(0, Math.min(100, isNaN(v) ? LP.audio.DEFAULT_VOLUME : v));
     dom.volValue.textContent = volume + '%';
     dom.volSlider.style.setProperty('--fill', volume + '%');
     if (dom.volSlider.value !== String(volume)) dom.volSlider.value = String(volume);
@@ -217,7 +217,7 @@
       reqLen = nearestLength(slot.len || slot.duration);
       dom.lenSelect.value = String(reqLen);
       selStart = slot.start;
-      setVolume(typeof slot.vol === 'number' ? slot.vol : 100);
+      setVolume(typeof slot.vol === 'number' ? slot.vol : LP.audio.DEFAULT_VOLUME);
     } else {
       setVolume(volume);
     }
