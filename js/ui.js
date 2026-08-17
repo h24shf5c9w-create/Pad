@@ -10,13 +10,14 @@
 
   var state = {
     phase: 'idle',        // idle | permission | denied | recording | processing | ready | error
-    mode: 'play',         // play | customize
-    buffer: null,         // decoded AudioBuffer of the whole recording
-    peaks: null,
-    duration: 0,
+    mode: 'play',         // play | loop | customize
+    editSrc: null,        // id of the source shown in the editor
     activePad: 0,
     blocked: null        // set when the environment rules recording out entirely
   };
+
+  function editSource() { return state.editSrc ? LP.sources.get(state.editSrc) : null; }
+  function hasRecording() { return LP.sources.recordings().length > 0; }
 
   var PHASE_TEXT = {
     idle:       'No recording yet',
@@ -31,7 +32,11 @@
   function cacheDom() {
     [
       'app', 'secureBanner', 'recDot', 'statusText', 'recTime',
-      'btnRecord', 'btnStop', 'btnNew', 'modePlay', 'modeCustomize',
+      'btnRecord', 'btnStop', 'btnNew', 'modePlay', 'modeLoop', 'modeCustomize',
+      'loopPanel', 'loopPadLabel', 'loopSrcLabel', 'stepBoard', 'btnTransport',
+      'bpmSlider', 'bpmValue', 'btnClearSteps', 'btnClearAllSteps',
+      'btnSongs', 'songSheet', 'songBackdrop', 'songClose', 'songName',
+      'btnSaveSong', 'songNote', 'songList', 'srcSelect',
       'editor', 'editorPadLabel', 'editorRange', 'waveWrap', 'waveBase',
       'waveSel', 'selWindow', 'waveEmpty', 'editorControls', 'lenSelect',
       'btnPreview', 'btnSave', 'btnClearPad', 'editorHint', 'padGrid',
@@ -79,13 +84,15 @@
       setStatus(message || PHASE_TEXT[phase] || '', isError);
     }
 
-    var hasAudio = !!state.buffer;
+    var hasAudio = hasRecording();
     var busy = phase === 'permission' || phase === 'processing';
 
     /* A blocked environment must survive every later phase change. */
     dom.btnRecord.disabled = busy || phase === 'recording' || !!state.blocked;
     dom.btnStop.disabled = phase !== 'recording';
-    dom.btnNew.disabled = busy || (!hasAudio && phase !== 'recording');
+    var hasContent = hasAudio || phase === 'recording' ||
+      (LP.pads && LP.pads.anyLoaded()) || (LP.sequencer && LP.sequencer.anySteps());
+    dom.btnNew.disabled = busy || !hasContent;
 
     dom.recTime.classList.toggle('is-live', phase === 'recording');
     if (phase === 'recording') {
@@ -98,14 +105,18 @@
     renderFootHint();
   }
 
+  var MODE_BTN = { play: 'modePlay', loop: 'modeLoop', customize: 'modeCustomize' };
+
   function setMode(mode) {
     state.mode = mode;
-    var isPlay = mode === 'play';
-    dom.modePlay.classList.toggle('is-active', isPlay);
-    dom.modeCustomize.classList.toggle('is-active', !isPlay);
-    dom.modePlay.setAttribute('aria-selected', String(isPlay));
-    dom.modeCustomize.setAttribute('aria-selected', String(!isPlay));
+    Object.keys(MODE_BTN).forEach(function (key) {
+      var btn = dom[MODE_BTN[key]];
+      var on = key === mode;
+      btn.classList.toggle('is-active', on);
+      btn.setAttribute('aria-selected', String(on));
+    });
     dom.editor.setAttribute('data-mode', mode);
+    dom.loopPanel.hidden = mode !== 'loop';
     renderEditorVisibility();
     renderFootHint();
   }
@@ -113,35 +124,36 @@
   /* The editor card is hidden in play mode until there is audio,
      so the pads stay as large as possible. */
   function renderEditorVisibility() {
-    var hasAudio = !!state.buffer;
-    var show = state.mode === 'customize' || hasAudio;
+    var src = editSource();
+    /* Loop mode needs the height for the step board; play mode only
+       shows the waveform once something has actually been recorded. */
+    var show = state.mode === 'customize' || (state.mode === 'play' && hasRecording());
     dom.editor.hidden = !show;
-    dom.waveEmpty.hidden = hasAudio;
+    dom.waveEmpty.hidden = !!src;
 
-    var disabled = !hasAudio;
+    var disabled = !src;
     dom.lenSelect.disabled = disabled;
     dom.volSlider.disabled = disabled;
+    dom.srcSelect.disabled = disabled;
     dom.btnPreview.disabled = disabled;
     dom.btnSave.disabled = disabled;
 
-    if (!hasAudio) {
+    if (!src) {
       dom.editorPadLabel.textContent = 'Waveform';
       dom.editorRange.textContent = '—';
       dom.editorHint.textContent = 'Record something first.';
     } else if (state.mode === 'play') {
-      /* No pad is being edited here — show the whole recording instead. */
-      dom.editorPadLabel.textContent = 'Recording';
-      dom.editorRange.textContent = '0:00.00 → ' + formatPrecise(state.duration);
+      dom.editorPadLabel.textContent = src.name;
+      dom.editorRange.textContent = '0:00.00 → ' + formatPrecise(src.duration);
     }
   }
 
   function renderFootHint() {
-    var hasAudio = !!state.buffer;
     var text;
     if (state.phase === 'recording') text = 'Recording — press Stop when you are done.';
-    else if (!hasAudio) text = 'Record something to fill the pads.';
-    else if (state.mode === 'play') text = 'Tap a pad to play.';
-    else text = 'Tap a pad, drag the window, then save.';
+    else if (state.mode === 'loop') text = 'Tap a pad, then switch its steps on.';
+    else if (state.mode === 'customize') text = 'Pick a sound, drag the window, then save.';
+    else text = 'Tap a pad to play.';
     dom.footHint.textContent = text;
   }
 
@@ -201,6 +213,8 @@
   LP.ui = {
     dom: dom,
     state: state,
+    editSource: editSource,
+    hasRecording: hasRecording,
     init: function () { cacheDom(); initModal(); initSoundHint(); },
     showSoundHint: showSoundHint,
     hideSoundHint: hideSoundHint,

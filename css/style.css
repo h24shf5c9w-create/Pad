@@ -38,7 +38,7 @@
   --sal: env(safe-area-inset-left, 0px);
   --sar: env(safe-area-inset-right, 0px);
 
-  --wave-h: 116px;
+  --wave-h: 104px;
 
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
           Helvetica, Arial, sans-serif;
@@ -135,10 +135,28 @@ h1, h2, h3, p { margin: 0; }
 }
 
 .privacy {
-  font-size: 11px;
+  font-size: 10.5px;
   color: var(--muted-dim);
   letter-spacing: .02em;
 }
+
+.chip-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.chip-btn:active { transform: scale(.96); }
 
 .card {
   background: var(--surface);
@@ -328,7 +346,7 @@ h1, h2, h3, p { margin: 0; }
 .mode-switch {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
   padding: 4px;
   background: var(--surface);
@@ -343,9 +361,9 @@ h1, h2, h3, p { margin: 0; }
   background: transparent;
   color: var(--muted);
   font-family: inherit;
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
-  letter-spacing: .08em;
+  letter-spacing: .06em;
   text-transform: uppercase;
   min-height: 40px;
   border-radius: 10px;
@@ -456,14 +474,15 @@ h1, h2, h3, p { margin: 0; }
 
 .editor-controls {
   display: grid;
-  grid-template-columns: minmax(92px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.78fr) minmax(0, 1.15fr);
   grid-template-areas:
-    "len  vol"
-    "prev save";
+    "src  len  vol"
+    "prev save save";
   gap: 8px;
   align-items: end;
   margin-top: 11px;
 }
+.field-src  { grid-area: src; }
 .field-len  { grid-area: len; }
 .field-vol  { grid-area: vol; }
 #btnPreview { grid-area: prev; }
@@ -532,20 +551,21 @@ h1, h2, h3, p { margin: 0; }
   appearance: none;
   width: 100%;
   min-height: 42px;
-  padding: 0 30px 0 12px;
+  padding: 0 22px 0 10px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background-color: var(--surface-2);
   background-image:
     linear-gradient(45deg, transparent 50%, var(--muted) 50%),
     linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-position: calc(100% - 13px) 50%, calc(100% - 8px) 50%;
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   color: var(--text);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
+  text-overflow: ellipsis;
 }
 .select:disabled { opacity: .4; }
 
@@ -564,6 +584,81 @@ h1, h2, h3, p { margin: 0; }
 }
 
 /* ── Launchpad ────────────────────────────────────────────── */
+.loop-panel { padding: 11px 13px; }
+
+.loop-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+.loop-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.loop-src {
+  font-size: 11.5px;
+  color: var(--muted-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 16 steps as 2 rows of 8: a single row of 16 would put every cell
+   well below the 44px touch minimum on a phone. */
+.step-board {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 5px;
+}
+
+.step {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  min-height: 40px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted-dim);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color .1s ease, border-color .1s ease;
+}
+.step.is-beat { border-color: var(--line-strong); }
+.step.is-on {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+  font-weight: 700;
+}
+.step.is-cursor { box-shadow: 0 0 0 2px var(--text) inset; }
+.step.is-on.is-cursor { box-shadow: 0 0 0 2px #fff inset; }
+
+.transport {
+  display: grid;
+  grid-template-columns: minmax(112px, auto) 1fr;
+  gap: 9px;
+  align-items: end;
+  margin-top: 10px;
+}
+.field-bpm .field-label b { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+.loop-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 6px;
+}
+
 .pad-section {
   flex: 1 1 0%;
   display: flex;
@@ -664,6 +759,29 @@ h1, h2, h3, p { margin: 0; }
   opacity: .75;
 }
 
+.pad-src {
+  position: absolute;
+  left: 9px; right: 9px;
+  bottom: 21px;
+  font-size: 8.5px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  opacity: .6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.pad-steps {
+  position: absolute;
+  top: 8px; right: 22px;
+  font-size: 8.5px;
+  color: var(--accent);
+  opacity: .9;
+}
+.pad.has-steps { border-color: var(--accent-line); }
+
 .pad-key {
   position: absolute;
   top: 8px; left: 9px;
@@ -691,11 +809,20 @@ h1, h2, h3, p { margin: 0; }
 
 .app-foot {
   flex: 0 0 auto;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 11px;
   color: var(--muted-dim);
   padding-top: 2px;
   min-height: 15px;
+}
+.app-foot .foot-hint::after {
+  content: "\00b7";
+  padding-left: 8px;
+  color: var(--line-strong);
 }
 
 /* ── Modal ────────────────────────────────────────────────── */
@@ -730,13 +857,104 @@ h1, h2, h3, p { margin: 0; }
 .modal-body  { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
 .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
 
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: calc(var(--sat) + 16px) 0 0;
+}
+
+.sheet-card {
+  position: relative;
+  width: 100%;
+  max-width: 520px;
+  max-height: 82vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 16px 16px calc(var(--sab) + 16px);
+  box-shadow: 0 -12px 44px rgba(0, 0, 0, .6);
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.sheet-save {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.text-input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 16px;   /* below 16px iOS zooms the page on focus */
+  min-width: 0;
+}
+.text-input::placeholder { color: var(--muted-dim); }
+
+.sheet-note {
+  font-size: 11.5px;
+  color: var(--muted-dim);
+  margin: 9px 2px 4px;
+}
+.sheet-note.is-error { color: #ff9aa7; }
+
+.song-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.song-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px;
+  border-top: 1px solid var(--line);
+}
+.song-info { flex: 1 1 auto; min-width: 0; }
+.song-name {
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.song-meta { font-size: 11px; color: var(--muted-dim); }
+.song-empty { padding: 14px 2px; font-size: 12.5px; color: var(--muted-dim); }
+
 /* ── Responsive tweaks ────────────────────────────────────── */
 /* Short phones (iPhone SE class): claw back enough vertical space that
    customize mode still fits without scrolling and pads stay >= 44px. */
 @media (max-height: 700px) {
-  :root { --wave-h: 62px; --pad-gap: 8px; }
-  .app { gap: 6px; }
-  .card { padding: 9px; }
+  :root { --wave-h: 54px; --pad-gap: 8px; }
+  .app { gap: 5px; }
+  .card { padding: 8px 9px; }
+  .field-label { font-size: 9.5px; }
+  .hint { font-size: 11px; }
+  .editor-foot { min-height: 0; }
+  .mode-btn { min-height: 36px; }
+  .editor-head, .loop-head { margin-bottom: 7px; }
   .btn { min-height: 46px; }
   .btn-sm { min-height: 38px; }
   .select { min-height: 38px; }
@@ -746,7 +964,10 @@ h1, h2, h3, p { margin: 0; }
   .editor-controls { margin-top: 7px; gap: 7px; }
   .editor-foot { margin-top: 5px; }
   .pad-section { min-height: 200px; }
-  .app-foot { display: none; }
+  .app-foot .foot-hint { display: none; }
+  .loop-panel { padding: 9px 11px; }
+  .step { min-height: 34px; }
+  .transport { margin-top: 8px; }
   .editor[data-mode="play"] { --wave-h: 56px; }
 }
 

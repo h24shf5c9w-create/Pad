@@ -30,6 +30,10 @@
   function init() {
     dom = LP.ui.dom;
 
+    dom.srcSelect.addEventListener('change', function () {
+      selectSource(dom.srcSelect.value);
+    });
+
     dom.lenSelect.addEventListener('change', function () {
       reqLen = parseFloat(dom.lenSelect.value) || 0.5;
       layout(true);
@@ -64,7 +68,9 @@
      end of the recording stays reachable even when the window
      is being held at its minimum touch size. */
 
-  function total() { return LP.ui.state.duration || 0; }
+  function src() { return LP.ui.editSource(); }
+  function buffer() { var x = src(); return x ? x.buffer : null; }
+  function total() { var x = src(); return x ? x.duration : 0; }
   function range() { return Math.max(0, total() - effDur); }
   function travel() { return Math.max(0, wrapW - selPx); }
 
@@ -87,7 +93,7 @@
   }
 
   function layout(keepStart) {
-    if (!dom || !LP.ui.state.buffer) return;
+    if (!dom || !buffer()) return;
     var dur = total();
     wrapW = dom.waveWrap.clientWidth || 0;
     if (!wrapW || !dur) return;
@@ -133,7 +139,7 @@
   /* ── Dragging ─────────────────────────────────────────────── */
 
   function canDrag() {
-    return LP.ui.state.mode === 'customize' && !!LP.ui.state.buffer;
+    return LP.ui.state.mode === 'customize' && !!buffer();
   }
 
   function onPointerDown(e) {
@@ -208,10 +214,55 @@
 
   /* ── Pad binding ──────────────────────────────────────────── */
 
+  /* Rebuilds the sound dropdown: instruments first, then recordings. */
+  function refreshSources(preferred) {
+    if (!dom) return;
+    var all = LP.sources.all;
+    dom.srcSelect.innerHTML = '';
+    var groups = [
+      { label: 'Instruments', items: all.filter(function (x) { return x.kind === 'inst'; }) },
+      { label: 'Recordings', items: all.filter(function (x) { return x.kind === 'rec'; }) }
+    ];
+    groups.forEach(function (g) {
+      if (!g.items.length) return;
+      var og = document.createElement('optgroup');
+      og.label = g.label;
+      g.items.forEach(function (item) {
+        var o = document.createElement('option');
+        o.value = item.id;
+        o.textContent = item.name;
+        og.appendChild(o);
+      });
+      dom.srcSelect.appendChild(og);
+    });
+
+    var want = preferred || LP.ui.state.editSrc;
+    if (!want || !LP.sources.get(want)) want = LP.sources.firstId();
+    LP.ui.state.editSrc = want;
+    if (want) dom.srcSelect.value = want;
+  }
+
+  function selectSource(id) {
+    var next = LP.sources.get(id);
+    if (!next) return;
+    LP.ui.state.editSrc = id;
+    dom.srcSelect.value = id;
+    selStart = 0;
+    if (LP.app && LP.app.redraw) LP.app.redraw();
+    layout();
+    LP.ui.renderEditorVisibility();
+  }
+
   function openPad(index) {
     if (!dom) return;
     dom.editorPadLabel.textContent = 'Pad ' + (index + 1);
     var slot = LP.pads.get(index);
+
+    if (slot && LP.sources.get(slot.src)) {
+      LP.ui.state.editSrc = slot.src;
+      dom.srcSelect.value = slot.src;
+      if (LP.app && LP.app.redraw) LP.app.redraw();
+    }
 
     if (slot) {
       reqLen = nearestLength(slot.len || slot.duration);
@@ -239,17 +290,17 @@
   }
 
   function preview() {
-    if (!LP.ui.state.buffer) return;
+    if (!buffer()) return;
     LP.audio.unlock();
     LP.audio.stopSource(previewSrc);
-    previewSrc = LP.audio.play(LP.ui.state.buffer, selStart, effDur, volume);
+    previewSrc = LP.audio.play(buffer(), selStart, effDur, volume);
   }
 
   function save() {
-    if (!LP.ui.state.buffer) return;
+    if (!buffer()) return;
     var index = LP.ui.state.activePad;
     LP.audio.unlock();
-    LP.pads.assign(index, selStart, effDur, reqLen, volume);
+    LP.pads.assign(index, LP.ui.state.editSrc, selStart, effDur, reqLen, volume);
     LP.pads.trigger(index);
 
     dom.btnClearPad.hidden = false;
@@ -290,6 +341,8 @@
     init: init,
     layout: layout,
     openPad: openPad,
+    refreshSources: refreshSources,
+    selectSource: selectSource,
     preview: preview,
     save: save,
     reset: reset,

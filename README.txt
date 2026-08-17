@@ -29,6 +29,50 @@ CUSTOMIZE  - Pad antippen waehlt es aus. Danach das
              Lautstaerke einstellen, Preview hoeren und
              "Save to pad" druecken.
 
+LOOP (Step-Sequencer)
+- Im Modus LOOP zuerst ein Pad antippen, dann seine 16 Boxen
+  ein- und ausschalten. Jede Box ist eine Sechzehntelnote,
+  16 Boxen sind ein Takt.
+  Beispiel: jede 2. Box anschalten ergibt eine durchlaufende
+  Hi-hat auf Achteln.
+- Jedes der 16 Pads hat sein eigenes Muster. Mehrere Pads
+  laufen gleichzeitig.
+- "Play loop" startet die Endlosschleife, nochmal druecken
+  stoppt sie. Am Desktop geht auch die Leertaste.
+- Tempo von 60 bis 200 BPM einstellbar, auch waehrend
+  die Schleife laeuft.
+- Das Timing haengt an der Audio-Uhr, nicht an einem Timer,
+  deshalb eiert es auch dann nicht, wenn das Handy
+  zwischendurch beschaeftigt ist.
+
+
+INSTRUMENTE
+- Fuenf eingebaute Sounds sind sofort da, ohne Aufnahme:
+  Kick, Snare, Hi-hat, Open hat, Clap.
+- Sie werden beim Start im Browser erzeugt, es wird nichts
+  nachgeladen.
+- Auswahl im Modus CUSTOMIZE ueber das Feld "Sound".
+
+
+MEHRERE AUFNAHMEN
+- Record kann beliebig oft gedrueckt werden. Jede Aufnahme
+  kommt als eigener Eintrag dazu und ersetzt die vorherige
+  nicht.
+- Im Feld "Sound" stehen alle Instrumente und alle Aufnahmen.
+  So kann Pad 1 aus Aufnahme 1 kommen und Pad 2 aus Aufnahme 2.
+- "New" loescht alles (mit Rueckfrage). Die eingebauten
+  Instrumente bleiben erhalten.
+
+
+SONGS SPEICHERN
+- Oben rechts auf "Songs" tippen.
+- Name eingeben und "Save" druecken. Gespeichert werden
+  Pad-Belegung, alle Muster, das Tempo und die Aufnahmen.
+- Gespeicherte Songs lassen sich laden und loeschen.
+- Alles liegt lokal im Browser (IndexedDB). Es wird nichts
+  hochgeladen. Loescht man die Browserdaten, sind die Songs weg.
+
+
 LAUTSTAERKE
 - Jedes Pad hat einen eigenen Regler von 0 bis 100 Prozent.
 - Neue Pads starten bei 30 Prozent. Das ist der unverstaerkte
@@ -83,11 +127,15 @@ DATEIEN
 index.html               Einstiegsseite
 css/style.css            Gesamtes Styling
 js/audio-engine.js       AudioContext, Wiedergabe, Decoding
-js/recorder.js           Mikrofonaufnahme (MediaRecorder + Fallback)
+js/instruments.js        Eingebautes Schlagzeug (Kick, Snare, ...)
 js/waveform.js           Peak-Berechnung und Canvas-Rendering
+js/sources.js            Verwaltung aller Klangquellen
+js/recorder.js           Mikrofonaufnahme (MediaRecorder + Fallback)
 js/storage.js            Lokale Sicherung (IndexedDB)
+js/songs.js              Songs speichern, laden, loeschen
 js/ui.js                 UI-Zustaende, Statuszeile, Dialog
 js/pads.js               16 Pads, Trigger, Tastatur
+js/sequencer.js          16 Steps pro Pad, Transport, Tempo
 js/editor.js             Auswahlfenster, Preview, Save to pad
 js/app.js                Verdrahtung und Ablaeufe
 assets/                  Icons

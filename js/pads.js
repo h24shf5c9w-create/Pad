@@ -42,10 +42,18 @@
       var len = document.createElement('span');
       len.className = 'pad-len';
 
+      var src = document.createElement('span');
+      src.className = 'pad-src';
+
+      var steps = document.createElement('span');
+      steps.className = 'pad-steps';
+
       pad.appendChild(key);
       pad.appendChild(mark);
+      pad.appendChild(steps);
       pad.appendChild(num);
       pad.appendChild(len);
+      pad.appendChild(src);
       frag.appendChild(pad);
       els.push(pad);
     }
@@ -75,22 +83,33 @@
 
   function handle(index) {
     if (isNaN(index) || index < 0 || index >= COUNT) return;
-    if (LP.ui.state.mode === 'customize') {
+    var mode = LP.ui.state.mode;
+    if (mode === 'customize') {
       select(index);
+    } else if (mode === 'loop') {
+      /* Selecting the row to edit, and hearing it, are the same tap. */
+      select(index);
+      trigger(index);
     } else {
       trigger(index);
     }
   }
 
-  /* Audio first — every line below the play() call is cosmetic. */
-  function trigger(index) {
+  /* Audio only. `when` is an AudioContext timestamp, used by the
+     sequencer; leave it out for an immediate hit. */
+  function playAt(index, when) {
     var slot = slots[index];
-    if (slot && LP.ui.state.buffer) {
-      LP.audio.play(LP.ui.state.buffer, slot.start, slot.duration, slot.vol);
-    }
+    if (!slot) return;
+    var src = LP.sources.get(slot.src);
+    if (!src) return;
+    LP.audio.play(src.buffer, slot.start, slot.duration, slot.vol, when);
+  }
+
+  /* Audio first — every line below the playAt() call is cosmetic. */
+  function trigger(index) {
+    playAt(index);
     flash(els[index]);
-    /* Cosmetic, and only after the audio call. */
-    if (slot && LP.audio.blocked) {
+    if (slots[index] && LP.audio.blocked) {
       LP.ui.showSoundHint('Audio is still starting up — tap the pad once more.');
     }
   }
@@ -115,8 +134,8 @@
     if (onSelect) onSelect(index);
   }
 
-  function assign(index, start, duration, len, vol) {
-    slots[index] = { start: start, duration: duration, len: len, vol: vol };
+  function assign(index, src, start, duration, len, vol) {
+    slots[index] = { src: src, start: start, duration: duration, len: len, vol: vol };
     render(index);
     if (onChange) onChange();
   }
@@ -146,8 +165,10 @@
     if (!Array.isArray(list)) return;
     for (var i = 0; i < COUNT; i++) {
       var s = list[i];
-      slots[i] = (s && typeof s.start === 'number' && typeof s.duration === 'number')
-        ? { start: s.start, duration: s.duration, len: s.len || s.duration,
+      var usable = s && typeof s.start === 'number' && typeof s.duration === 'number' &&
+        s.src && LP.sources.get(s.src);
+      slots[i] = usable
+        ? { src: s.src, start: s.start, duration: s.duration, len: s.len || s.duration,
             vol: typeof s.vol === 'number' ? s.vol : LP.audio.DEFAULT_VOLUME }
         : null;
     }
@@ -162,18 +183,25 @@
     var active = LP.ui.state.mode === 'customize' && LP.ui.state.activePad === index;
 
     var muted = loaded && slot.vol === 0;
+    var steps = LP.sequencer ? LP.sequencer.stepCount(index) : 0;
+    var src = loaded ? LP.sources.get(slot.src) : null;
 
     el.classList.toggle('is-loaded', loaded);
     el.classList.toggle('is-active', active);
     el.classList.toggle('is-muted', muted);
+    el.classList.toggle('has-steps', steps > 0);
     el.querySelector('.pad-len').textContent =
       loaded ? (muted ? 'muted' : trimNum(slot.duration) + 's') : '';
+    el.querySelector('.pad-src').textContent = src ? src.name : '';
+    el.querySelector('.pad-steps').textContent = steps ? steps + '\u25aa' : '';
 
     var label = 'Pad ' + (index + 1) + ', ' +
-      (loaded ? trimNum(slot.duration) + ' second sample at ' + slot.vol + ' percent volume'
+      (loaded ? (src ? src.name + ', ' : '') + trimNum(slot.duration) +
+                ' second sample at ' + slot.vol + ' percent volume'
               : 'empty');
     if (muted) label += ', muted';
-    if (active) label += ', selected for editing';
+    if (steps) label += ', ' + steps + ' steps in the loop';
+    if (active) label += ', selected';
     el.setAttribute('aria-label', label);
     el.setAttribute('aria-pressed', String(active));
   }
@@ -188,7 +216,7 @@
 
   function serialize() {
     return slots.map(function (s) {
-      return s ? { start: s.start, duration: s.duration, len: s.len, vol: s.vol } : null;
+      return s ? { src: s.src, start: s.start, duration: s.duration, len: s.len, vol: s.vol } : null;
     });
   }
 
@@ -211,6 +239,8 @@
     COUNT: COUNT,
     build: build,
     trigger: trigger,
+    playAt: playAt,
+    flashIndex: function (i) { flash(els[i]); },
     select: select,
     assign: assign,
     setVolume: setVolume,
@@ -222,6 +252,10 @@
     serialize: serialize,
     initKeyboard: initKeyboard,
     get: function (i) { return slots[i] || null; },
+    anyLoaded: function () {
+      for (var i = 0; i < COUNT; i++) if (slots[i]) return true;
+      return false;
+    },
     set onSelect(fn) { onSelect = fn; },
     set onChange(fn) { onChange = fn; }
   };

@@ -190,7 +190,7 @@
   }
 
   /* Fire and forget. Returns the source so callers (preview) can stop it. */
-  function play(buffer, startTime, duration, volume) {
+  function play(buffer, startTime, duration, volume, when) {
     var c = ctx;
     if (!c || !buffer) return null;
     var level = gainFor(volume);
@@ -203,7 +203,10 @@
     var dur = Math.min(duration || 0, buffer.duration - start);
     if (!(dur > 0)) return null;
 
-    var t = c.currentTime;
+    /* `when` lets the sequencer place a hit on the audio clock
+       instead of firing it from a timer. */
+    var now = c.currentTime;
+    var t = (when && when > now) ? when : now;
     var fade = Math.min(FADE, dur / 4);
 
     var src = c.createBufferSource();
