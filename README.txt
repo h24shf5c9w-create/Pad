@@ -5,12 +5,16 @@ DEPLOYMENT (GoDaddy cPanel)
 ---------------------------
 1. Bei GoDaddy cPanel anmelden.
 2. File Manager oeffnen.
-3. public_html oeffnen.
-4. website.zip hochladen.
-5. ZIP entpacken.
-6. Sicherstellen, dass index.html direkt in public_html liegt.
-7. Domain ueber HTTPS oeffnen.
-8. Mikrofonzugriff erlauben.
+3. public_html/padlab oeffnen.
+4. index.html hochladen und die alte Datei ueberschreiben.
+   (Oder website.zip hochladen und entpacken - enthaelt
+   zusaetzlich die Icons und das Manifest.)
+5. Seite ueber HTTPS oeffnen und einmal neu laden.
+6. Mikrofonzugriff erlauben.
+
+Die alten Ordner css/ und js/ auf dem Server werden nicht mehr
+gebraucht und koennen geloescht werden - sie stoeren aber auch
+nicht.
 
 Fertig. Es wird kein Node.js, kein npm, keine Datenbank,
 kein Backend und kein PHP benoetigt.
@@ -41,10 +45,10 @@ HINWEISE
      offen ist.
   3. Einmal auf ein Pad tippen - Safari gibt Audio erst nach der
      ersten Beruehrung frei.
-  Die App schaltet zusaetzlich selbst auf die Playback-Audiosession
-  um und baut den AudioContext nach jeder Aufnahme neu auf, damit
-  der Ton auf dem Lautsprecher landet und nicht im Hoerermuschel-
-  Ausgang haengen bleibt.
+  Die App setzt zusaetzlich selbst die iOS-Audiosession: waehrend
+  der Aufnahme auf "play-and-record", danach zurueck auf
+  "playback". So ignoriert der Ton den Stummschalter und landet
+  auf dem Lautsprecher statt in der Hoermuschel.
 
 - HTTPS ist Pflicht. Ohne sicheren Kontext gibt der Browser
   das Mikrofon nicht frei; die App zeigt dann einen Hinweis.
@@ -57,15 +61,9 @@ HINWEISE
 
 DATEIEN
 -------
-index.html               Einstiegsseite
-css/style.css            Gesamtes Styling
-js/audio-engine.js       AudioContext, Wiedergabe, Decoding
-js/recorder.js           Mikrofonaufnahme (MediaRecorder + Fallback)
-js/waveform.js           Peak-Berechnung und Canvas-Rendering
-js/storage.js            Lokale Sicherung (IndexedDB)
-js/ui.js                 UI-Zustaende, Statuszeile, Dialog
-js/pads.js               16 Pads, Trigger, Tastatur
-js/editor.js             Auswahlfenster, Preview, Save to pad
-js/app.js                Verdrahtung und Ablaeufe
-assets/                  Icons
-manifest.webmanifest     Web-App-Manifest
+index.html               Die komplette App - HTML, CSS und
+                         JavaScript in einer einzigen Datei.
+                         Laeuft auch allein, ohne alles Weitere.
+assets/                  Icons (optional)
+manifest.webmanifest     Web-App-Manifest (optional, fuer
+                         "Zum Home-Bildschirm")

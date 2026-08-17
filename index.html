@@ -15,7 +15,722 @@
 <link rel="icon" href="assets/icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="stylesheet" href="css/style.css">
+<style>
+/* ============================================================
+   PADLAB — 16 pad mic sampler
+   Dark, mobile-first, no external assets.
+   ============================================================ */
+
+/* ── Tokens ───────────────────────────────────────────────── */
+:root {
+  --bg:          #08080a;
+  --surface:     #101015;
+  --surface-2:   #17171e;
+  --surface-3:   #1e1e27;
+  --line:        rgba(255, 255, 255, .07);
+  --line-strong: rgba(255, 255, 255, .14);
+
+  --text:        #f3f3f6;
+  --muted:       #8c8c99;
+  --muted-dim:   #5d5d69;
+
+  --accent:      #35d9a0;
+  --accent-dim:  rgba(53, 217, 160, .16);
+  --accent-line: rgba(53, 217, 160, .42);
+  --on-accent:   #05130d;
+
+  --wave-base:   #3b3b47;
+
+  --rec:         #ff4a5e;
+  --rec-dim:     rgba(255, 74, 94, .15);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-pad: 16px;
+
+  --pad-gap: 9px;
+
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+  --sal: env(safe-area-inset-left, 0px);
+  --sar: env(safe-area-inset-right, 0px);
+
+  --wave-h: 116px;
+
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto,
+          Helvetica, Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+/* Several components set an explicit display, which would otherwise
+   win over the [hidden] attribute's UA rule. */
+[hidden] { display: none !important; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 15px;
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  /* No accidental text selection / callouts while playing pads. */
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  /* Kills the 300 ms double-tap zoom without disabling pinch zoom. */
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+}
+
+h1, h2, h3, p { margin: 0; }
+
+.mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── App shell ────────────────────────────────────────────── */
+.app {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100vh;          /* fallback for older iOS */
+  height: 100dvh;
+  padding:
+    calc(var(--sat) + 12px)
+    calc(var(--sar) + 14px)
+    calc(var(--sab) + 10px)
+    calc(var(--sal) + 14px);
+  max-width: 640px;
+  margin: 0 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+}
+
+.brand { display: flex; align-items: center; gap: 9px; }
+
+.brand-mark {
+  width: 13px; height: 13px;
+  border-radius: 4px;
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-dim);
+}
+
+.brand-name {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .16em;
+}
+
+.privacy {
+  font-size: 11px;
+  color: var(--muted-dim);
+  letter-spacing: .02em;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 13px;
+  flex: 0 0 auto;
+}
+
+/* ── Banner ───────────────────────────────────────────────── */
+.banner {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 11px 13px;
+  border-radius: var(--r-md);
+  background: var(--rec-dim);
+  border: 1px solid rgba(255, 74, 94, .3);
+  font-size: 12.5px;
+  color: #ffd9de;
+}
+.hint-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px 9px 13px;
+  border-radius: var(--r-md);
+  background: rgba(245, 196, 81, .1);
+  border: 1px solid rgba(245, 196, 81, .28);
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #f7dfa8;
+}
+.hint-bar span { flex: 1 1 auto; }
+
+.hint-close {
+  -webkit-appearance: none;
+  appearance: none;
+  flex: 0 0 auto;
+  width: 30px; height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: #f7dfa8;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.banner code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: rgba(0, 0, 0, .3);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+/* ── Recording card ───────────────────────────────────────── */
+.rec-status {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 11px;
+  min-height: 20px;
+}
+
+.rec-dot {
+  width: 9px; height: 9px;
+  border-radius: 50%;
+  background: var(--muted-dim);
+  flex: 0 0 auto;
+  transition: background-color .18s ease;
+}
+.rec-dot[data-state="recording"] {
+  background: var(--rec);
+  animation: pulse 1.15s ease-in-out infinite;
+}
+.rec-dot[data-state="ready"]      { background: var(--accent); }
+.rec-dot[data-state="processing"] { background: #f5c451; animation: pulse .8s ease-in-out infinite; }
+.rec-dot[data-state="error"]      { background: var(--rec); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1;   box-shadow: 0 0 0 0 var(--rec-dim); }
+  50%      { opacity: .55; box-shadow: 0 0 0 6px transparent; }
+}
+
+.rec-label {
+  font-size: 13px;
+  color: var(--muted);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.rec-label.is-error { color: #ff9aa7; }
+
+.rec-time {
+  font-size: 13px;
+  color: var(--muted-dim);
+  letter-spacing: .02em;
+}
+.rec-time.is-live { color: var(--rec); }
+
+.rec-actions {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr .8fr;
+  gap: 8px;
+}
+
+/* ── Buttons ──────────────────────────────────────────────── */
+.btn {
+  -webkit-appearance: none;
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: .01em;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .09s ease, background-color .15s ease, opacity .15s ease;
+}
+.btn:active:not(:disabled) { transform: scale(.97); }
+.btn:disabled { opacity: .38; cursor: default; }
+
+.btn-sm { min-height: 42px; font-size: 13.5px; }
+
+.btn-rec {
+  background: var(--rec);
+  border-color: transparent;
+  color: #fff;
+}
+.btn-rec[data-state="armed"] { background: var(--surface-3); color: var(--muted); }
+
+.btn-stop { background: var(--surface-3); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+.btn-primary.is-saved { background: var(--accent); }
+
+.btn-ghost { background: transparent; }
+
+.btn-danger {
+  background: var(--rec);
+  border-color: transparent;
+  color: #fff;
+}
+
+.btn-glyph { flex: 0 0 auto; display: block; }
+.glyph-rec  { width: 11px; height: 11px; border-radius: 50%; background: currentColor; }
+.glyph-stop { width: 10px; height: 10px; border-radius: 2px; background: currentColor; }
+.glyph-play {
+  width: 0; height: 0;
+  border-left: 9px solid currentColor;
+  border-top: 5.5px solid transparent;
+  border-bottom: 5.5px solid transparent;
+}
+
+.link-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 4px 2px;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.link-btn:active { color: var(--text); }
+
+/* ── Mode switch ──────────────────────────────────────────── */
+.mode-switch {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.mode-btn {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  min-height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color .15s ease, color .15s ease;
+}
+.mode-btn.is-active {
+  background: var(--surface-3);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.mode-btn:disabled { opacity: .4; cursor: default; }
+
+/* ── Editor / waveform ────────────────────────────────────── */
+.editor { padding: 12px 13px 11px; }
+
+.editor-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.editor-pad {
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.editor[data-mode="customize"] .editor-pad { color: var(--accent); }
+
+.editor-range {
+  font-size: 11.5px;
+  color: var(--muted-dim);
+}
+
+.wave-wrap {
+  position: relative;
+  height: var(--wave-h);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  overflow: hidden;
+  touch-action: none;   /* drag the selection without scrolling the page */
+  /* No height transition: animating this slides the pad grid for ~180 ms
+     after a mode switch and taps land on the wrong pad. */
+}
+
+.wave-canvas {
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  display: block;
+}
+
+.wave-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12.5px;
+  color: var(--muted-dim);
+}
+
+/* Selection window — the grab target is the whole window, not a handle. */
+.sel {
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 0;
+  background: var(--accent-dim);
+  border-left: 2px solid var(--accent);
+  border-right: 2px solid var(--accent);
+  box-shadow: 0 0 0 1px rgba(53, 217, 160, .18) inset;
+  cursor: grab;
+  will-change: transform;
+  display: none;
+}
+.sel-clip { position: absolute; inset: 0; overflow: hidden; }
+.sel-clip .wave-canvas { will-change: transform; }
+
+.sel-tag {
+  position: absolute;
+  left: 50%;
+  bottom: 5px;
+  transform: translateX(-50%);
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: .14em;
+  color: var(--accent);
+  background: rgba(8, 8, 10, .72);
+  padding: 1px 5px;
+  border-radius: 4px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+.sel.is-narrow .sel-tag { display: none; }
+.sel.is-dragging { cursor: grabbing; background: rgba(53, 217, 160, .24); }
+
+/* Play mode: slimmer strip, no selection, no controls. */
+.editor[data-mode="play"] { --wave-h: 66px; }
+.editor[data-mode="play"] .editor-controls,
+.editor[data-mode="play"] .editor-foot { display: none; }
+.editor[data-mode="customize"] .sel { display: block; }
+
+.editor-controls {
+  display: grid;
+  grid-template-columns: minmax(96px, 1fr) auto minmax(120px, 1.1fr);
+  gap: 8px;
+  align-items: end;
+  margin-top: 11px;
+}
+
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+.field-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted-dim);
+  padding-left: 2px;
+}
+
+.select {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-height: 42px;
+  padding: 0 30px 0 12px;
+  border-radius: var(--r-md);
+  border: 1px solid var(--line-strong);
+  background-color: var(--surface-2);
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%;
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+}
+.select:disabled { opacity: .4; }
+
+.editor-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  min-height: 18px;
+}
+
+.hint {
+  font-size: 11.5px;
+  color: var(--muted-dim);
+}
+
+/* ── Launchpad ────────────────────────────────────────────── */
+.pad-section {
+  flex: 1 1 0%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Floor keeps pads at the 44px touch minimum on short phones. */
+  min-height: 204px;
+  container-type: size;
+}
+
+.pad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: var(--pad-gap);
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+}
+
+/* The square has to fit the shorter axis of the free space, otherwise a
+   height clamp squashes the pads into rectangles. cqmin does exactly that. */
+@supports (width: 1cqmin) {
+  .pad-grid { width: 100cqmin; }
+}
+/* aspect-ratio fallback: keeps pads square on very old engines */
+@supports not (aspect-ratio: 1 / 1) {
+  .pad-grid::before { content: ""; grid-area: 1 / 1; padding-bottom: 100%; }
+}
+
+.pad {
+  -webkit-appearance: none;
+  appearance: none;
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  padding: 8px 9px;
+  min-width: 0;
+  border-radius: var(--r-pad);
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--muted-dim);
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  overflow: hidden;
+  /* Audio-first: only cheap compositor properties are animated. */
+  transition: transform .1s ease-out, background-color .12s ease, border-color .12s ease;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.pad-num { opacity: .8; }
+
+/* Empty pads carry a dotted mark, so "empty" is not colour-only. */
+.pad-mark {
+  position: absolute;
+  top: 9px; right: 9px;
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  border: 1px dashed var(--muted-dim);
+}
+
+.pad.is-loaded {
+  background: linear-gradient(160deg, rgba(53, 217, 160, .13), rgba(53, 217, 160, .05));
+  border-color: var(--accent-line);
+  color: var(--accent);
+}
+.pad.is-loaded .pad-mark {
+  border: 0;
+  background: var(--accent);
+}
+
+.pad.is-active {
+  box-shadow: 0 0 0 2px var(--accent) inset;
+  color: var(--accent);
+}
+.pad.is-active::after {
+  content: "EDIT";
+  position: absolute;
+  top: 8px; left: 9px;
+  font-size: 8.5px;
+  letter-spacing: .1em;
+  color: var(--accent);
+}
+
+.pad-len {
+  position: absolute;
+  bottom: 8px; right: 9px;
+  font-size: 9.5px;
+  opacity: .75;
+}
+
+.pad-key {
+  position: absolute;
+  top: 8px; left: 9px;
+  font-size: 9px;
+  opacity: .45;
+  display: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .pad-key { display: block; }
+  .pad.is-active .pad-key { display: none; }
+}
+
+/* Trigger flash: ~110 ms, transform + colour only. */
+.pad.is-hit {
+  transform: scale(.965);
+  background: rgba(53, 217, 160, .3);
+  border-color: var(--accent);
+  transition: none;
+}
+/* An empty pad acknowledges the tap without pretending to be loaded. */
+.pad:not(.is-loaded).is-hit {
+  background: rgba(255, 255, 255, .1);
+  border-color: var(--line-strong);
+}
+
+.app-foot {
+  flex: 0 0 auto;
+  text-align: center;
+  font-size: 11px;
+  color: var(--muted-dim);
+  padding-top: 2px;
+  min-height: 15px;
+}
+
+/* ── Modal ────────────────────────────────────────────────── */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: calc(var(--sat) + 20px) 20px calc(var(--sab) + 20px);
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 4, 6, .72);
+}
+
+.modal-card {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+
+.modal-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.modal-body  { font-size: 13.5px; color: var(--muted); margin-bottom: 16px; }
+.modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+
+/* ── Responsive tweaks ────────────────────────────────────── */
+/* Short phones (iPhone SE class): claw back enough vertical space that
+   customize mode still fits without scrolling and pads stay >= 44px. */
+@media (max-height: 700px) {
+  :root { --wave-h: 72px; --pad-gap: 8px; }
+  .app { gap: 7px; }
+  .card { padding: 10px; }
+  .btn { min-height: 46px; }
+  .rec-status { margin-bottom: 9px; }
+  .editor-controls { margin-top: 9px; }
+  .editor-foot { margin-top: 6px; }
+  .pad-section { min-height: 200px; }
+  .app-foot { display: none; }
+  .editor[data-mode="play"] { --wave-h: 56px; }
+}
+
+@media (max-height: 600px) {
+  :root { --wave-h: 60px; }
+  .btn { min-height: 44px; }
+  /* Header shrinks but never disappears — it carries the privacy notice. */
+  .brand-name { font-size: 14px; }
+  .brand-mark { width: 10px; height: 10px; }
+  .privacy { font-size: 10px; }
+  .rec-status { margin-bottom: 7px; }
+}
+
+@media (min-width: 560px) {
+  :root { --pad-gap: 12px; --wave-h: 140px; }
+  body { font-size: 16px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+  .pad.is-hit { transform: none; }
+}
+</style>
 </head>
 <body>
 
@@ -142,13 +857,1835 @@
   </div>
 </div>
 
-<script src="js/audio-engine.js" defer></script>
-<script src="js/recorder.js" defer></script>
-<script src="js/waveform.js" defer></script>
-<script src="js/storage.js" defer></script>
-<script src="js/ui.js" defer></script>
-<script src="js/pads.js" defer></script>
-<script src="js/editor.js" defer></script>
-<script src="js/app.js" defer></script>
+<script>
+/* ============================================================
+   Audio Engine
+   One AudioContext for the whole app. Samples are played by
+   pointing an AudioBufferSourceNode at a region of the single
+   decoded recording buffer — nothing is re-decoded on trigger.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var ctx = null;
+  var master = null;
+  var unlocked = false;
+  var keepAlive = null;       // silent <audio> loop, see forceAudibleSession()
+
+  /* Short ramp on both ends so slicing mid-waveform doesn't click. */
+  var FADE = 0.004;
+
+  /* ── iOS output routing ───────────────────────────────────────
+     Two things silence Web Audio on an iPhone even when everything
+     else is correct:
+
+     1. Web Audio alone runs in the "ambient" audio session, which the
+        hardware silent switch mutes.
+     2. While the mic is open the session is "play and record", which
+        routes output to the earpiece instead of the speaker, and
+        Safari does not always restore it when the mic is released.
+
+     Safari 16.4+ exposes navigator.audioSession, which sets both
+     directly — that is the fix. Older iOS gets the classic fallback:
+     a silent looping <audio> element, paused while recording and
+     restarted afterwards, which pulls the route back to the speaker.
+
+     What this must never do again is close the AudioContext: the
+     decoded recording is an AudioBuffer owned by that context, and
+     playing it through a replacement context is exactly what left
+     both the pads and Preview silent. One context lives for the
+     whole session. */
+
+  var IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  function setSessionType(type) {
+    try {
+      if (navigator.audioSession && 'type' in navigator.audioSession) {
+        navigator.audioSession.type = type;
+        return true;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  function silentTrackUrl() {
+    var rate = 8000, n = Math.floor(rate * 0.5);
+    var bytes = new Uint8Array(44 + n);
+    var dv = new DataView(bytes.buffer);
+    function tag(o, str) { for (var i = 0; i < str.length; i++) dv.setUint8(o + i, str.charCodeAt(i)); }
+    tag(0, 'RIFF'); dv.setUint32(4, 36 + n, true); tag(8, 'WAVE');
+    tag(12, 'fmt '); dv.setUint32(16, 16, true); dv.setUint16(20, 1, true);
+    dv.setUint16(22, 1, true); dv.setUint32(24, rate, true); dv.setUint32(28, rate, true);
+    dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+    tag(36, 'data'); dv.setUint32(40, n, true);
+    for (var i = 0; i < n; i++) bytes[44 + i] = 128;   // 8-bit silence
+    try { return URL.createObjectURL(new Blob([bytes], { type: 'audio/wav' })); }
+    catch (e) { return null; }
+  }
+
+  function startKeepAlive() {
+    try {
+      if (!keepAlive) {
+        var url = silentTrackUrl();
+        if (!url) return;
+        keepAlive = document.createElement('audio');
+        keepAlive.src = url;
+        keepAlive.loop = true;
+        keepAlive.preload = 'auto';
+        keepAlive.setAttribute('playsinline', '');
+        keepAlive.setAttribute('webkit-playsinline', '');
+        keepAlive.style.cssText = 'position:absolute;width:0;height:0;opacity:0;pointer-events:none';
+        document.body.appendChild(keepAlive);
+      }
+      if (keepAlive.paused) {
+        var pr = keepAlive.play();
+        if (pr && pr.catch) pr.catch(function () {});
+      }
+    } catch (e) { /* not fatal — Web Audio still plays when unmuted */ }
+  }
+
+  function stopKeepAlive() {
+    try { if (keepAlive && !keepAlive.paused) keepAlive.pause(); } catch (e) {}
+  }
+
+  function forceAudibleSession() {
+    /* iOS only — elsewhere this would needlessly take over the
+       media session and stop whatever the user was listening to. */
+    if (!IS_IOS) return;
+    /* The real API wins; the silent element is only for iOS < 16.4. */
+    if (setSessionType('playback')) { stopKeepAlive(); return; }
+    startKeepAlive();
+  }
+
+  /* Called around getUserMedia so the session type follows the mic
+     instead of being guessed after the fact. */
+  function micStarted() {
+    if (!IS_IOS) return;
+    if (!setSessionType('play-and-record')) stopKeepAlive();
+  }
+
+  function micReleased() {
+    if (!IS_IOS) return;
+    /* Claim the speaker again straight away, and once more on the
+       next gesture via unlock(). */
+    forceAudibleSession();
+  }
+
+  function context() {
+    if (ctx) return ctx;
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    try {
+      ctx = new AC({ latencyHint: 'interactive' });
+    } catch (e) {
+      try { ctx = new AC(); } catch (e2) { return null; }
+    }
+    master = ctx.createGain();
+    master.gain.value = 1;
+    master.connect(ctx.destination);
+    return ctx;
+  }
+
+  /* Must run inside a user gesture on iOS: claim an audible session,
+     resume, then start one silent source — that last step is what
+     actually flips the context on. */
+  function unlock() {
+    var c = context();
+    if (!c) return;
+
+    forceAudibleSession();
+
+    /* iOS also reports the non-standard 'interrupted' state.
+       Older WebKit's resume() returns undefined, not a promise. */
+    if (c.state !== 'running' && c.resume) {
+      try {
+        var r = c.resume();
+        if (r && r.catch) r.catch(function () {});
+      } catch (e) {}
+    }
+    if (unlocked) return;
+    try {
+      var s = c.createBufferSource();
+      s.buffer = c.createBuffer(1, 1, c.sampleRate);
+      s.connect(master);
+      s.start(0);
+      unlocked = true;
+    } catch (e) { /* retried on the next gesture */ }
+  }
+
+  /* Safari implements both the callback and promise forms; support both. */
+  function decode(arrayBuffer) {
+    var c = context();
+    if (!c) return Promise.reject(new Error('no-audio-context'));
+    return new Promise(function (resolve, reject) {
+      var settled = false;
+      function ok(buf) { if (!settled) { settled = true; resolve(buf); } }
+      function fail(err) { if (!settled) { settled = true; reject(err || new Error('decode-failed')); } }
+      var p;
+      try {
+        p = c.decodeAudioData(arrayBuffer, ok, fail);
+      } catch (e) { fail(e); return; }
+      if (p && typeof p.then === 'function') p.then(ok, fail);
+    });
+  }
+
+  /* Safari refuses a buffer that was made by a different context, and
+     throws on assignment rather than falling back. Copy the samples
+     into a buffer this context owns and carry on. */
+  function adopt(c, buffer) {
+    var channels = buffer.numberOfChannels || 1;
+    var out = c.createBuffer(channels, buffer.length, buffer.sampleRate);
+    for (var ch = 0; ch < channels; ch++) {
+      var data = buffer.getChannelData(ch);
+      if (out.copyToChannel) out.copyToChannel(data, ch);
+      else out.getChannelData(ch).set(data);
+    }
+    return out;
+  }
+
+  /* Fire and forget. Returns a handle so callers (preview) can stop it. */
+  function play(buffer, startTime, duration) {
+    var c = context();
+    if (!c || !buffer) return null;
+
+    var start = Math.max(0, Math.min(startTime || 0, buffer.duration));
+    var dur = Math.min(duration || 0, buffer.duration - start);
+    if (!(dur > 0)) return null;
+
+    var handle = { src: null, started: false, stopped: false };
+
+    function begin() {
+      if (handle.started || handle.stopped) return;
+      handle.started = true;
+
+      var t = c.currentTime;
+      var fade = Math.min(FADE, dur / 4);
+
+      var src = c.createBufferSource();
+      try {
+        src.buffer = buffer;
+      } catch (e) {
+        try { src.buffer = adopt(c, buffer); } catch (e2) { return; }
+      }
+
+      var g = c.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(1, t + fade);
+      g.gain.setValueAtTime(1, t + dur - fade);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+
+      src.connect(g);
+      g.connect(master);
+
+      src.onended = function () {
+        try { src.disconnect(); g.disconnect(); } catch (e) {}
+      };
+
+      try {
+        src.start(t, start, dur);
+        src.stop(t + dur + 0.02);
+      } catch (e) {
+        return;
+      }
+      handle.src = src;
+    }
+
+    if (c.state === 'running') {
+      /* The common case — schedule immediately, no added latency. */
+      begin();
+    } else {
+      /* A suspended or 'interrupted' context has a frozen clock, so
+         scheduling against currentTime here would queue the sample
+         into a timeline that never advances. Wait for the resume. */
+      var p = null;
+      try { p = c.resume ? c.resume() : null; } catch (e) {}
+      if (p && p.then) p.then(begin, begin);
+      else begin();
+      /* Safari occasionally leaves that promise unsettled. */
+      setTimeout(begin, 250);
+    }
+
+    return handle;
+  }
+
+  function stopSource(handle) {
+    if (!handle) return;
+    handle.stopped = true;
+    var src = handle.src || handle;
+    try { src.stop(0); } catch (e) {}
+    try { src.disconnect(); } catch (e) {}
+  }
+
+  /* Build an AudioBuffer straight from captured Float32 chunks
+     (used by the recorder fallback — no decode step needed). */
+  function bufferFromChunks(chunks, length, sampleRate) {
+    var c = context();
+    if (!c || !length) return null;
+    var out = c.createBuffer(1, length, sampleRate);
+    var data = out.getChannelData(0);
+    var offset = 0;
+    for (var i = 0; i < chunks.length; i++) {
+      data.set(chunks[i], offset);
+      offset += chunks[i].length;
+    }
+    return out;
+  }
+
+  LP.audio = {
+    context: context,
+    unlock: unlock,
+    micStarted: micStarted,
+    micReleased: micReleased,
+    /* Reported in the UI when a pad is hit but nothing can come out. */
+    get blocked() { return !ctx || ctx.state !== 'running'; },
+    decode: decode,
+    play: play,
+    stopSource: stopSource,
+    bufferFromChunks: bufferFromChunks,
+    get sampleRate() { return ctx ? ctx.sampleRate : 44100; },
+    get state() { return ctx ? ctx.state : 'none'; },
+    supported: !!(window.AudioContext || window.webkitAudioContext)
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   Recording
+   MediaRecorder is the primary path (audio/mp4 on iOS Safari,
+   audio/webm elsewhere). If it is missing we capture raw
+   Float32 frames through the AudioContext instead.
+   Recording runs until stop() is called — there is no time cap.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var MIME_CANDIDATES = [
+    'audio/webm;codecs=opus',
+    'audio/webm',
+    'audio/mp4;codecs=mp4a.40.2',
+    'audio/mp4',
+    'audio/aac',
+    'audio/ogg;codecs=opus'
+  ];
+
+  var stream = null;
+  var recorder = null;
+  var chunks = [];
+  var startedAt = 0;
+  var stoppedAt = 0;
+  var active = false;
+  var mode = 'mediarecorder';
+
+  /* Fallback capture state */
+  var srcNode = null, processor = null, sinkNode = null;
+  var pcmChunks = [], pcmLength = 0, pcmRate = 44100;
+
+  function pickMime() {
+    if (!window.MediaRecorder || !window.MediaRecorder.isTypeSupported) return '';
+    for (var i = 0; i < MIME_CANDIDATES.length; i++) {
+      try {
+        if (window.MediaRecorder.isTypeSupported(MIME_CANDIDATES[i])) return MIME_CANDIDATES[i];
+      } catch (e) {}
+    }
+    return '';
+  }
+
+  function getStream() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      var err = new Error('getUserMedia unavailable');
+      err.name = 'NotSupportedError';
+      return Promise.reject(err);
+    }
+    /* Raw-ish input makes for better samples; fall back to plain
+       audio:true if the device rejects the constraint set. */
+    var tuned = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false
+      }
+    };
+    return navigator.mediaDevices.getUserMedia(tuned).catch(function (e) {
+      if (e && (e.name === 'NotAllowedError' || e.name === 'SecurityError' ||
+                e.name === 'NotFoundError' || e.name === 'NotReadableError')) {
+        throw e;
+      }
+      return navigator.mediaDevices.getUserMedia({ audio: true });
+    });
+  }
+
+  function releaseStream() {
+    if (!stream) return;
+    try {
+      stream.getTracks().forEach(function (t) { t.stop(); });
+    } catch (e) {}
+    stream = null;
+  }
+
+  function startFallbackCapture() {
+    var ctx = LP.audio.context();
+    if (!ctx) throw new Error('no-audio-context');
+    if (ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(function () {});
+
+    pcmChunks = [];
+    pcmLength = 0;
+    pcmRate = ctx.sampleRate;
+
+    srcNode = ctx.createMediaStreamSource(stream);
+    processor = ctx.createScriptProcessor(4096, 1, 1);
+    sinkNode = ctx.createGain();
+    sinkNode.gain.value = 0;
+
+    processor.onaudioprocess = function (ev) {
+      if (!active) return;
+      var input = ev.inputBuffer.getChannelData(0);
+      pcmChunks.push(new Float32Array(input));
+      pcmLength += input.length;
+    };
+
+    srcNode.connect(processor);
+    processor.connect(sinkNode);
+    sinkNode.connect(ctx.destination);
+  }
+
+  function stopFallbackCapture() {
+    try { if (processor) { processor.onaudioprocess = null; processor.disconnect(); } } catch (e) {}
+    try { if (srcNode) srcNode.disconnect(); } catch (e) {}
+    try { if (sinkNode) sinkNode.disconnect(); } catch (e) {}
+    processor = srcNode = sinkNode = null;
+  }
+
+  /* Resolves once the mic is live and capture has begun. */
+  function start(onTrackLost) {
+    if (active) return Promise.reject(new Error('already-recording'));
+    chunks = [];
+
+    return getStream().then(function (s) {
+      stream = s;
+
+      var track = s.getAudioTracks()[0];
+      if (track && onTrackLost) {
+        track.addEventListener('ended', function () {
+          if (active) onTrackLost();
+        });
+      }
+
+      if (window.MediaRecorder) {
+        mode = 'mediarecorder';
+        var mime = pickMime();
+        try {
+          recorder = mime ? new MediaRecorder(s, { mimeType: mime }) : new MediaRecorder(s);
+        } catch (e) {
+          recorder = new MediaRecorder(s);
+        }
+        recorder.ondataavailable = function (ev) {
+          if (ev.data && ev.data.size > 0) chunks.push(ev.data);
+        };
+        /* No timeslice: Safari hands back one well-formed blob at stop. */
+        recorder.start();
+      } else {
+        mode = 'pcm';
+        startFallbackCapture();
+      }
+
+      active = true;
+      startedAt = Date.now();
+      stoppedAt = 0;
+      return true;
+    });
+  }
+
+  /* Resolves with { kind: 'bytes', bytes, mime } or { kind: 'pcm', ... }. */
+  function stop() {
+    if (!active) return Promise.reject(new Error('not-recording'));
+
+    return new Promise(function (resolve, reject) {
+      active = false;
+      stoppedAt = Date.now();
+
+      if (mode === 'pcm') {
+        stopFallbackCapture();
+        releaseStream();
+        if (!pcmLength) { reject(new Error('empty-recording')); return; }
+        resolve({ kind: 'pcm', chunks: pcmChunks, length: pcmLength, sampleRate: pcmRate });
+        pcmChunks = [];
+        return;
+      }
+
+      var rec = recorder;
+      recorder = null;
+      if (!rec) { reject(new Error('not-recording')); return; }
+
+      var settled = false;
+      var guard = setTimeout(function () { finish(); }, 4000);
+
+      function finish() {
+        if (settled) return;
+        settled = true;
+        clearTimeout(guard);
+        releaseStream();
+
+        if (!chunks.length) { reject(new Error('empty-recording')); return; }
+        var type = (rec.mimeType || chunks[0].type || 'audio/webm').split(';')[0];
+        var blob = new Blob(chunks, { type: type });
+        chunks = [];
+
+        if (!blob.size) { reject(new Error('empty-recording')); return; }
+
+        blobToArrayBuffer(blob).then(function (bytes) {
+          resolve({ kind: 'bytes', bytes: bytes, mime: type });
+        }, reject);
+      }
+
+      rec.onstop = finish;
+      rec.onerror = function () { finish(); };
+
+      try {
+        if (rec.state !== 'inactive') rec.stop();
+        else finish();
+      } catch (e) { finish(); }
+    });
+  }
+
+  function blobToArrayBuffer(blob) {
+    if (blob.arrayBuffer) return blob.arrayBuffer();
+    return new Promise(function (resolve, reject) {
+      var fr = new FileReader();
+      fr.onload = function () { resolve(fr.result); };
+      fr.onerror = function () { reject(fr.error || new Error('read-failed')); };
+      fr.readAsArrayBuffer(blob);
+    });
+  }
+
+  /* Hard abort — used by reset while a recording is running. */
+  function cancel() {
+    active = false;
+    if (mode === 'pcm') stopFallbackCapture();
+    if (recorder) {
+      try { recorder.onstop = null; recorder.ondataavailable = null; recorder.stop(); } catch (e) {}
+      recorder = null;
+    }
+    chunks = [];
+    pcmChunks = [];
+    pcmLength = 0;
+    releaseStream();
+  }
+
+  LP.recorder = {
+    start: start,
+    stop: stop,
+    cancel: cancel,
+    get isRecording() { return active; },
+    get elapsed() {
+      if (!startedAt) return 0;
+      return ((active ? Date.now() : stoppedAt) - startedAt) / 1000;
+    },
+    supported: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   Waveform
+   Peaks are reduced once per recording, then drawn with a
+   single stroked path. Dragging never redraws the canvas —
+   the accent layer is just translated inside a clip window.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var BUCKETS = 3000;
+
+  function computePeaks(buffer) {
+    var channels = Math.min(buffer.numberOfChannels, 2);
+    var length = buffer.length;
+    var buckets = Math.min(BUCKETS, Math.max(1, length));
+    var step = length / buckets;
+    var peaks = new Float32Array(buckets);
+
+    var data = [];
+    for (var c = 0; c < channels; c++) data.push(buffer.getChannelData(c));
+
+    for (var b = 0; b < buckets; b++) {
+      var from = Math.floor(b * step);
+      var to = Math.min(length, Math.floor((b + 1) * step));
+      if (to <= from) to = Math.min(length, from + 1);
+      var peak = 0;
+      for (var i = from; i < to; i++) {
+        for (var ch = 0; ch < channels; ch++) {
+          var v = data[ch][i];
+          if (v < 0) v = -v;
+          if (v > peak) peak = v;
+        }
+      }
+      peaks[b] = peak;
+    }
+
+    /* Normalise so quiet phone recordings still read clearly. */
+    var max = 0;
+    for (var k = 0; k < peaks.length; k++) if (peaks[k] > max) max = peaks[k];
+    if (max > 0.0001) {
+      var gain = 1 / max;
+      if (gain > 8) gain = 8;
+      for (var m = 0; m < peaks.length; m++) peaks[m] = Math.min(1, peaks[m] * gain);
+    }
+    return peaks;
+  }
+
+  function draw(canvas, peaks, color) {
+    if (!canvas) return;
+    var cssW = canvas.clientWidth || canvas.parentNode.clientWidth || 300;
+    var cssH = canvas.clientHeight || canvas.parentNode.clientHeight || 100;
+    var dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+
+    var w = Math.max(1, Math.round(cssW * dpr));
+    var h = Math.max(1, Math.round(cssH * dpr));
+    if (canvas.width !== w) canvas.width = w;
+    if (canvas.height !== h) canvas.height = h;
+
+    var g = canvas.getContext('2d');
+    g.clearRect(0, 0, w, h);
+    if (!peaks || !peaks.length) return;
+
+    var barW = Math.max(1.5, Math.round(2 * dpr));
+    var gap = Math.max(1, Math.round(1.6 * dpr));
+    var stepPx = barW + gap;
+    var bars = Math.max(1, Math.floor(w / stepPx));
+    var mid = h / 2;
+    var maxH = h * 0.44;
+    var minH = barW / 2;
+
+    g.strokeStyle = color;
+    g.lineWidth = barW;
+    g.lineCap = 'round';
+    g.beginPath();
+
+    for (var i = 0; i < bars; i++) {
+      var from = Math.floor(i * peaks.length / bars);
+      var to = Math.max(from + 1, Math.floor((i + 1) * peaks.length / bars));
+      var peak = 0;
+      for (var p = from; p < to && p < peaks.length; p++) {
+        if (peaks[p] > peak) peak = peaks[p];
+      }
+      var barH = Math.max(minH, peak * maxH);
+      var x = i * stepPx + barW / 2 + gap / 2;
+      g.moveTo(x, mid - barH);
+      g.lineTo(x, mid + barH);
+    }
+    g.stroke();
+  }
+
+  LP.waveform = { computePeaks: computePeaks, draw: draw };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   Persistence (best effort, never load-bearing)
+   Pad assignments and the encoded recording live in IndexedDB.
+   localStorage is deliberately not used for audio. Every call
+   resolves even when storage is unavailable or full — the app
+   must work perfectly with nothing restored.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var DB_NAME = 'padlab';
+  var STORE = 'kv';
+  var MAX_AUDIO_BYTES = 24 * 1024 * 1024;
+
+  var dbPromise = null;
+  var saveTimer = null;
+
+  function open() {
+    if (dbPromise) return dbPromise;
+    dbPromise = new Promise(function (resolve) {
+      if (!window.indexedDB) { resolve(null); return; }
+      var req;
+      try { req = window.indexedDB.open(DB_NAME, 1); }
+      catch (e) { resolve(null); return; }
+
+      req.onupgradeneeded = function () {
+        var db = req.result;
+        if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+      };
+      req.onsuccess = function () { resolve(req.result); };
+      req.onerror = function () { resolve(null); };
+      req.onblocked = function () { resolve(null); };
+    });
+    return dbPromise;
+  }
+
+  function withStore(mode, fn) {
+    return open().then(function (db) {
+      if (!db) return null;
+      return new Promise(function (resolve) {
+        var tx, store;
+        try {
+          tx = db.transaction(STORE, mode);
+          store = tx.objectStore(STORE);
+        } catch (e) { resolve(null); return; }
+        var result = null;
+        try { result = fn(store); } catch (e) { resolve(null); return; }
+        tx.oncomplete = function () {
+          resolve(result && result.result !== undefined ? result.result : null);
+        };
+        tx.onerror = function () { resolve(null); };
+        tx.onabort = function () { resolve(null); };
+      });
+    }).catch(function () { return null; });
+  }
+
+  function get(key) {
+    return withStore('readonly', function (store) { return store.get(key); });
+  }
+
+  function put(key, value) {
+    return withStore('readwrite', function (store) { return store.put(value, key); });
+  }
+
+  function del(key) {
+    return withStore('readwrite', function (store) { return store.delete(key); });
+  }
+
+  /* Resolves with { audio, session } — either may be null. */
+  function load() {
+    return Promise.all([get('audio'), get('session')]).then(function (rows) {
+      return { audio: rows[0] || null, session: rows[1] || null };
+    }).catch(function () { return { audio: null, session: null }; });
+  }
+
+  function saveAudio(bytes, mime) {
+    if (!bytes || bytes.byteLength > MAX_AUDIO_BYTES) return Promise.resolve(false);
+    return put('audio', { bytes: bytes, mime: mime, savedAt: Date.now() })
+      .then(function () { return true; })
+      .catch(function () { return false; });
+  }
+
+  /* Debounced: pad edits can arrive in bursts. */
+  function saveSession(data) {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () {
+      saveTimer = null;
+      put('session', { pads: data.pads, prefs: data.prefs, savedAt: Date.now() });
+    }, 250);
+  }
+
+  function clear() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    return Promise.all([del('audio'), del('session')]).catch(function () {});
+  }
+
+  LP.storage = {
+    load: load,
+    saveAudio: saveAudio,
+    saveSession: saveSession,
+    clear: clear,
+    available: !!window.indexedDB
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   UI State
+   Single source of truth for the interface phase, plus the
+   status line, mode switch and confirm dialog.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var dom = {};
+
+  var state = {
+    phase: 'idle',        // idle | permission | denied | recording | processing | ready | error
+    mode: 'play',         // play | customize
+    buffer: null,         // decoded AudioBuffer of the whole recording
+    peaks: null,
+    duration: 0,
+    activePad: 0,
+    blocked: null        // set when the environment rules recording out entirely
+  };
+
+  var PHASE_TEXT = {
+    idle:       'No recording yet',
+    permission: 'Asking for microphone access…',
+    denied:     'Microphone access denied',
+    recording:  'Recording…',
+    processing: 'Preparing audio…',
+    ready:      'Recording ready',
+    error:      'Something went wrong'
+  };
+
+  function cacheDom() {
+    [
+      'app', 'secureBanner', 'recDot', 'statusText', 'recTime',
+      'btnRecord', 'btnStop', 'btnNew', 'modePlay', 'modeCustomize',
+      'editor', 'editorPadLabel', 'editorRange', 'waveWrap', 'waveBase',
+      'waveSel', 'selWindow', 'waveEmpty', 'editorControls', 'lenSelect',
+      'btnPreview', 'btnSave', 'btnClearPad', 'editorHint', 'padGrid',
+      'footHint', 'modal', 'modalBackdrop', 'modalTitle', 'modalBody',
+      'modalCancel', 'modalConfirm', 'soundHint', 'soundHintText', 'soundHintClose'
+    ].forEach(function (id) { dom[id] = document.getElementById(id); });
+  }
+
+  function formatTime(seconds) {
+    var s = Math.max(0, seconds || 0);
+    var m = Math.floor(s / 60);
+    var rest = s - m * 60;
+    var whole = Math.floor(rest);
+    var tenths = Math.floor((rest - whole) * 10);
+    return m + ':' + (whole < 10 ? '0' : '') + whole + '.' + tenths;
+  }
+
+  function formatPrecise(seconds) {
+    var s = Math.max(0, seconds || 0);
+    var m = Math.floor(s / 60);
+    var rest = s - m * 60;
+    return m + ':' + (rest < 10 ? '0' : '') + rest.toFixed(2);
+  }
+
+  function setStatus(text, isError) {
+    dom.statusText.textContent = text;
+    dom.statusText.classList.toggle('is-error', !!isError);
+  }
+
+  function setPhase(phase, message) {
+    state.phase = phase;
+
+    var dotState = phase;
+    if (phase === 'denied' || phase === 'error') dotState = 'error';
+    else if (phase === 'permission') dotState = 'processing';
+    else if (phase !== 'recording' && phase !== 'processing' && phase !== 'ready') dotState = 'idle';
+    dom.recDot.setAttribute('data-state', dotState);
+
+    var isError = phase === 'denied' || phase === 'error';
+    if (state.blocked) {
+      dom.recDot.setAttribute('data-state', 'error');
+      setStatus(state.blocked, true);
+    } else {
+      setStatus(message || PHASE_TEXT[phase] || '', isError);
+    }
+
+    var hasAudio = !!state.buffer;
+    var busy = phase === 'permission' || phase === 'processing';
+
+    /* A blocked environment must survive every later phase change. */
+    dom.btnRecord.disabled = busy || phase === 'recording' || !!state.blocked;
+    dom.btnStop.disabled = phase !== 'recording';
+    dom.btnNew.disabled = busy || (!hasAudio && phase !== 'recording');
+
+    dom.recTime.classList.toggle('is-live', phase === 'recording');
+    if (phase === 'recording') {
+      dom.btnRecord.setAttribute('aria-label', 'Recording in progress');
+    } else {
+      dom.btnRecord.setAttribute('aria-label', hasAudio ? 'Record again' : 'Start recording');
+    }
+
+    renderEditorVisibility();
+    renderFootHint();
+  }
+
+  function setMode(mode) {
+    state.mode = mode;
+    var isPlay = mode === 'play';
+    dom.modePlay.classList.toggle('is-active', isPlay);
+    dom.modeCustomize.classList.toggle('is-active', !isPlay);
+    dom.modePlay.setAttribute('aria-selected', String(isPlay));
+    dom.modeCustomize.setAttribute('aria-selected', String(!isPlay));
+    dom.editor.setAttribute('data-mode', mode);
+    renderEditorVisibility();
+    renderFootHint();
+  }
+
+  /* The editor card is hidden in play mode until there is audio,
+     so the pads stay as large as possible. */
+  function renderEditorVisibility() {
+    var hasAudio = !!state.buffer;
+    var show = state.mode === 'customize' || hasAudio;
+    dom.editor.hidden = !show;
+    dom.waveEmpty.hidden = hasAudio;
+
+    var disabled = !hasAudio;
+    dom.lenSelect.disabled = disabled;
+    dom.btnPreview.disabled = disabled;
+    dom.btnSave.disabled = disabled;
+
+    if (!hasAudio) {
+      dom.editorPadLabel.textContent = 'Waveform';
+      dom.editorRange.textContent = '—';
+      dom.editorHint.textContent = 'Record something first.';
+    } else if (state.mode === 'play') {
+      /* No pad is being edited here — show the whole recording instead. */
+      dom.editorPadLabel.textContent = 'Recording';
+      dom.editorRange.textContent = '0:00.00 → ' + formatPrecise(state.duration);
+    }
+  }
+
+  function renderFootHint() {
+    var hasAudio = !!state.buffer;
+    var text;
+    if (state.phase === 'recording') text = 'Recording — press Stop when you are done.';
+    else if (!hasAudio) text = 'Record something to fill the pads.';
+    else if (state.mode === 'play') text = 'Tap a pad to play.';
+    else text = 'Tap a pad, drag the window, then save.';
+    dom.footHint.textContent = text;
+  }
+
+  /* ── Sound hint ─────────────────────────────────────────── */
+  var hintDismissed = false;
+
+  function showSoundHint(text) {
+    if (hintDismissed) return;
+    dom.soundHintText.textContent = text;
+    dom.soundHint.hidden = false;
+  }
+
+  function hideSoundHint() { dom.soundHint.hidden = true; }
+
+  function initSoundHint() {
+    dom.soundHintClose.addEventListener('click', function () {
+      hintDismissed = true;
+      hideSoundHint();
+    });
+  }
+
+  /* ── Confirm dialog ─────────────────────────────────────── */
+  var modalResolve = null;
+  var lastFocus = null;
+
+  function confirmDialog(opts) {
+    dom.modalTitle.textContent = opts.title;
+    dom.modalBody.textContent = opts.body;
+    dom.modalConfirm.textContent = opts.confirmLabel || 'Confirm';
+    lastFocus = document.activeElement;
+    dom.modal.hidden = false;
+    dom.modalConfirm.focus();
+    return new Promise(function (resolve) { modalResolve = resolve; });
+  }
+
+  function closeModal(result) {
+    dom.modal.hidden = true;
+    if (lastFocus && lastFocus.focus) {
+      try { lastFocus.focus({ preventScroll: true }); } catch (e) {}
+    }
+    lastFocus = null;
+    var r = modalResolve;
+    modalResolve = null;
+    if (r) r(result);
+  }
+
+  function initModal() {
+    dom.modalCancel.addEventListener('click', function () { closeModal(false); });
+    dom.modalBackdrop.addEventListener('click', function () { closeModal(false); });
+    dom.modalConfirm.addEventListener('click', function () { closeModal(true); });
+    document.addEventListener('keydown', function (e) {
+      if (dom.modal.hidden) return;
+      if (e.key === 'Escape') { e.preventDefault(); closeModal(false); }
+    });
+  }
+
+  LP.ui = {
+    dom: dom,
+    state: state,
+    init: function () { cacheDom(); initModal(); initSoundHint(); },
+    showSoundHint: showSoundHint,
+    hideSoundHint: hideSoundHint,
+    setPhase: setPhase,
+    setStatus: setStatus,
+    setBlocked: function (message) { state.blocked = message; setPhase(state.phase); },
+    setMode: setMode,
+    renderEditorVisibility: renderEditorVisibility,
+    renderFootHint: renderFootHint,
+    confirm: confirmDialog,
+    formatTime: formatTime,
+    formatPrecise: formatPrecise,
+    get isModalOpen() { return !dom.modal.hidden; }
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   Pad State + Launchpad
+   16 slots, each either null or { start, duration, len }.
+   Triggering starts audio first and paints afterwards.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var COUNT = 16;
+  var slots = new Array(COUNT);
+  var els = [];
+  var flashTimers = new Array(COUNT);
+  var onSelect = null;
+  var onChange = null;
+
+  /* Desktop convenience only; 'y' and 'z' both map to pad 13
+     so QWERTY and QWERTZ keyboards behave the same. */
+  var KEY_LABELS = ['1', '2', '3', '4', 'Q', 'W', 'E', 'R', 'A', 'S', 'D', 'F', 'Z', 'X', 'C', 'V'];
+  var KEY_MAP = {};
+  KEY_LABELS.forEach(function (k, i) { KEY_MAP[k.toLowerCase()] = i; });
+  KEY_MAP.y = 12;
+
+  function build(container) {
+    var frag = document.createDocumentFragment();
+    for (var i = 0; i < COUNT; i++) {
+      var pad = document.createElement('button');
+      pad.type = 'button';
+      pad.className = 'pad';
+      pad.dataset.index = String(i);
+
+      var key = document.createElement('span');
+      key.className = 'pad-key';
+      key.textContent = KEY_LABELS[i];
+
+      var mark = document.createElement('span');
+      mark.className = 'pad-mark';
+
+      var num = document.createElement('span');
+      num.className = 'pad-num';
+      num.textContent = (i + 1 < 10 ? '0' : '') + (i + 1);
+
+      var len = document.createElement('span');
+      len.className = 'pad-len';
+
+      pad.appendChild(key);
+      pad.appendChild(mark);
+      pad.appendChild(num);
+      pad.appendChild(len);
+      frag.appendChild(pad);
+      els.push(pad);
+    }
+    container.appendChild(frag);
+    renderAll();
+
+    /* One delegated, non-passive listener: pointerdown is the
+       earliest reliable touch signal and skips the click delay. */
+    container.addEventListener('pointerdown', onPointerDown, { passive: false });
+
+    /* Keyboard-generated clicks only (Enter/Space report detail 0). */
+    container.addEventListener('click', function (e) {
+      if (e.detail !== 0) return;
+      var pad = e.target.closest ? e.target.closest('.pad') : null;
+      if (!pad) return;
+      handle(parseInt(pad.dataset.index, 10));
+    });
+  }
+
+  function onPointerDown(e) {
+    var pad = e.target.closest ? e.target.closest('.pad') : null;
+    if (!pad) return;
+    /* Stops text selection, callouts and synthetic mouse events. */
+    e.preventDefault();
+    handle(parseInt(pad.dataset.index, 10));
+  }
+
+  function handle(index) {
+    if (isNaN(index) || index < 0 || index >= COUNT) return;
+    if (LP.ui.state.mode === 'customize') {
+      select(index);
+    } else {
+      trigger(index);
+    }
+  }
+
+  /* Audio first — every line below the play() call is cosmetic. */
+  function trigger(index) {
+    var slot = slots[index];
+    if (slot && LP.ui.state.buffer) {
+      LP.audio.play(LP.ui.state.buffer, slot.start, slot.duration);
+    }
+    flash(els[index]);
+    /* Cosmetic, and only after the audio call. Checked late: the
+       context is usually still resuming at this point and playback
+       is queued behind that, so an immediate check cries wolf. */
+    if (slot) {
+      setTimeout(function () {
+        if (LP.audio.blocked) {
+          LP.ui.showSoundHint('Audio is still starting up — tap the pad once more.');
+        }
+      }, 400);
+    }
+  }
+
+  function flash(el) {
+    if (!el) return;
+    var i = parseInt(el.dataset.index, 10);
+    if (flashTimers[i]) clearTimeout(flashTimers[i]);
+    el.classList.remove('is-hit');
+    requestAnimationFrame(function () {
+      el.classList.add('is-hit');
+      flashTimers[i] = setTimeout(function () {
+        el.classList.remove('is-hit');
+        flashTimers[i] = null;
+      }, 110);
+    });
+  }
+
+  function select(index) {
+    LP.ui.state.activePad = index;
+    renderAll();
+    if (onSelect) onSelect(index);
+  }
+
+  function assign(index, start, duration, len) {
+    slots[index] = { start: start, duration: duration, len: len };
+    render(index);
+    if (onChange) onChange();
+  }
+
+  function clear(index) {
+    slots[index] = null;
+    render(index);
+    if (onChange) onChange();
+  }
+
+  function clearAll() {
+    for (var i = 0; i < COUNT; i++) slots[i] = null;
+    renderAll();
+    if (onChange) onChange();
+  }
+
+  function restore(list) {
+    if (!Array.isArray(list)) return;
+    for (var i = 0; i < COUNT; i++) {
+      var s = list[i];
+      slots[i] = (s && typeof s.start === 'number' && typeof s.duration === 'number')
+        ? { start: s.start, duration: s.duration, len: s.len || s.duration }
+        : null;
+    }
+    renderAll();
+  }
+
+  function render(index) {
+    var el = els[index];
+    if (!el) return;
+    var slot = slots[index];
+    var loaded = !!slot;
+    var active = LP.ui.state.mode === 'customize' && LP.ui.state.activePad === index;
+
+    el.classList.toggle('is-loaded', loaded);
+    el.classList.toggle('is-active', active);
+    el.querySelector('.pad-len').textContent = loaded ? trimNum(slot.duration) + 's' : '';
+
+    var label = 'Pad ' + (index + 1) + ', ' +
+      (loaded ? trimNum(slot.duration) + ' second sample' : 'empty');
+    if (active) label += ', selected for editing';
+    el.setAttribute('aria-label', label);
+    el.setAttribute('aria-pressed', String(active));
+  }
+
+  function renderAll() {
+    for (var i = 0; i < COUNT; i++) render(i);
+  }
+
+  function trimNum(n) {
+    return String(Math.round(n * 100) / 100);
+  }
+
+  function serialize() {
+    return slots.map(function (s) {
+      return s ? { start: s.start, duration: s.duration, len: s.len } : null;
+    });
+  }
+
+  function initKeyboard() {
+    document.addEventListener('keydown', function (e) {
+      if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (LP.ui.isModalOpen) return;
+      var t = e.target;
+      if (t && (t.tagName === 'SELECT' || t.tagName === 'INPUT' || t.tagName === 'TEXTAREA')) return;
+      if (t && t.classList && t.classList.contains('pad')) return; // handled via click
+      var index = KEY_MAP[e.key ? e.key.toLowerCase() : ''];
+      if (index === undefined) return;
+      e.preventDefault();
+      LP.audio.unlock();
+      handle(index);
+    });
+  }
+
+  LP.pads = {
+    COUNT: COUNT,
+    build: build,
+    trigger: trigger,
+    select: select,
+    assign: assign,
+    clear: clear,
+    clearAll: clearAll,
+    restore: restore,
+    render: render,
+    renderAll: renderAll,
+    serialize: serialize,
+    initKeyboard: initKeyboard,
+    get: function (i) { return slots[i] || null; },
+    set onSelect(fn) { onSelect = fn; },
+    set onChange(fn) { onChange = fn; }
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   Sample Editor
+   The selection window is a fixed-width region dragged across
+   the waveform. Only two transforms are written per frame —
+   no canvas is redrawn while dragging.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var MIN_SEL_PX = 22;      // keeps a 0.1 s slice grabbable on a phone
+  var LENGTHS = [0.1, 0.2, 0.5, 1, 2, 3, 4, 5];
+
+  var dom = null;
+  var selStart = 0;         // seconds
+  var reqLen = 0.5;         // requested length from the dropdown
+  var effDur = 0.5;         // clamped to the recording length
+  var curLeft = 0;          // px
+  var selPx = 0;
+  var wrapW = 0;
+
+  var dragging = false;
+  var grabOffset = 0;
+  var wrapLeft = 0;
+  var pendingLeft = null;
+  var rafId = 0;
+  var previewSrc = null;
+  var saveTimer = null;
+
+  function init() {
+    dom = LP.ui.dom;
+
+    dom.lenSelect.addEventListener('change', function () {
+      reqLen = parseFloat(dom.lenSelect.value) || 0.5;
+      layout(true);
+      persistPrefs();
+    });
+
+    dom.btnPreview.addEventListener('click', preview);
+    dom.btnSave.addEventListener('click', save);
+    dom.btnClearPad.addEventListener('click', clearActivePad);
+
+    dom.waveWrap.addEventListener('pointerdown', onPointerDown, { passive: false });
+    dom.waveWrap.addEventListener('pointermove', onPointerMove, { passive: false });
+    dom.waveWrap.addEventListener('pointerup', onPointerUp);
+    dom.waveWrap.addEventListener('pointercancel', onPointerUp);
+
+    dom.selWindow.addEventListener('keydown', onKeyDown);
+  }
+
+  /* ── Geometry ─────────────────────────────────────────────
+     start seconds  <->  left pixels
+     Travel is measured against the *rendered* width so the very
+     end of the recording stays reachable even when the window
+     is being held at its minimum touch size. */
+
+  function total() { return LP.ui.state.duration || 0; }
+  function range() { return Math.max(0, total() - effDur); }
+  function travel() { return Math.max(0, wrapW - selPx); }
+
+  function startToLeft(s) {
+    var r = range(), t = travel();
+    if (r <= 0 || t <= 0) return 0;
+    return (s / r) * t;
+  }
+
+  function leftToStart(px) {
+    var r = range(), t = travel();
+    if (r <= 0 || t <= 0) return 0;
+    return (px / t) * r;
+  }
+
+  function clampStart(s) {
+    var r = range();
+    if (!(s > 0)) return 0;
+    return s > r ? r : s;
+  }
+
+  function layout(keepStart) {
+    if (!dom || !LP.ui.state.buffer) return;
+    var dur = total();
+    wrapW = dom.waveWrap.clientWidth || 0;
+    if (!wrapW || !dur) return;
+
+    /* A recording shorter than the requested length is simply
+       played whole. */
+    effDur = Math.min(reqLen, dur);
+
+    var geomPx = (effDur / dur) * wrapW;
+    selPx = Math.max(MIN_SEL_PX, Math.min(wrapW, geomPx));
+
+    dom.selWindow.style.width = selPx + 'px';
+    dom.selWindow.classList.toggle('is-narrow', selPx < 52);
+
+    if (keepStart !== false) selStart = clampStart(selStart);
+    applyLeft(startToLeft(selStart));
+    updateReadout();
+  }
+
+  function applyLeft(px) {
+    curLeft = px;
+    dom.selWindow.style.transform = 'translateX(' + px + 'px)';
+    dom.waveSel.style.transform = 'translateX(' + (-px) + 'px)';
+  }
+
+  function updateReadout() {
+    var fmt = LP.ui.formatPrecise;
+    dom.editorRange.textContent = fmt(selStart) + ' → ' + fmt(selStart + effDur);
+    dom.selWindow.setAttribute('aria-valuemin', '0');
+    dom.selWindow.setAttribute('aria-valuemax', range().toFixed(2));
+    dom.selWindow.setAttribute('aria-valuenow', selStart.toFixed(2));
+    dom.selWindow.setAttribute('aria-valuetext',
+      selStart.toFixed(2) + ' to ' + (selStart + effDur).toFixed(2) + ' seconds');
+  }
+
+  /* ── Dragging ─────────────────────────────────────────────── */
+
+  function canDrag() {
+    return LP.ui.state.mode === 'customize' && !!LP.ui.state.buffer;
+  }
+
+  function onPointerDown(e) {
+    if (!canDrag()) return;
+    e.preventDefault();
+    LP.audio.unlock();
+
+    var rect = dom.waveWrap.getBoundingClientRect();
+    wrapLeft = rect.left;
+    wrapW = rect.width;
+
+    var insideSelection = dom.selWindow.contains(e.target);
+    if (insideSelection) {
+      grabOffset = e.clientX - (wrapLeft + curLeft);
+    } else {
+      /* Tapping the waveform jumps the window under the finger. */
+      grabOffset = selPx / 2;
+      commitLeft(e.clientX - wrapLeft - grabOffset);
+    }
+
+    dragging = true;
+    dom.selWindow.classList.add('is-dragging');
+    try { dom.waveWrap.setPointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  function onPointerMove(e) {
+    if (!dragging) return;
+    e.preventDefault();
+    pendingLeft = e.clientX - wrapLeft - grabOffset;
+    if (!rafId) rafId = requestAnimationFrame(flushDrag);
+  }
+
+  function flushDrag() {
+    rafId = 0;
+    if (pendingLeft === null) return;
+    commitLeft(pendingLeft);
+    pendingLeft = null;
+  }
+
+  function commitLeft(px) {
+    var t = travel();
+    if (px < 0) px = 0;
+    if (px > t) px = t;
+    selStart = clampStart(leftToStart(px));
+    applyLeft(px);
+    updateReadout();
+  }
+
+  function onPointerUp(e) {
+    if (!dragging) return;
+    dragging = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    if (pendingLeft !== null) { commitLeft(pendingLeft); pendingLeft = null; }
+    dom.selWindow.classList.remove('is-dragging');
+    try { dom.waveWrap.releasePointerCapture(e.pointerId); } catch (err) {}
+  }
+
+  function onKeyDown(e) {
+    if (!canDrag()) return;
+    var step = e.shiftKey ? 0.5 : 0.05;
+    var next = selStart;
+    if (e.key === 'ArrowLeft') next = selStart - step;
+    else if (e.key === 'ArrowRight') next = selStart + step;
+    else if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = range();
+    else return;
+    e.preventDefault();
+    selStart = clampStart(next);
+    applyLeft(startToLeft(selStart));
+    updateReadout();
+  }
+
+  /* ── Pad binding ──────────────────────────────────────────── */
+
+  function openPad(index) {
+    if (!dom) return;
+    dom.editorPadLabel.textContent = 'Pad ' + (index + 1);
+    var slot = LP.pads.get(index);
+
+    if (slot) {
+      reqLen = nearestLength(slot.len || slot.duration);
+      dom.lenSelect.value = String(reqLen);
+      selStart = slot.start;
+    }
+    dom.btnClearPad.hidden = !slot;
+    dom.editorHint.textContent = slot
+      ? 'Drag to move, then save to overwrite this pad.'
+      : 'Drag the highlighted window across the waveform.';
+
+    layout();
+  }
+
+  function nearestLength(value) {
+    var best = LENGTHS[0], bestDiff = Infinity;
+    for (var i = 0; i < LENGTHS.length; i++) {
+      var d = Math.abs(LENGTHS[i] - value);
+      if (d < bestDiff) { bestDiff = d; best = LENGTHS[i]; }
+    }
+    return best;
+  }
+
+  function preview() {
+    if (!LP.ui.state.buffer) return;
+    LP.audio.unlock();
+    LP.audio.stopSource(previewSrc);
+    previewSrc = LP.audio.play(LP.ui.state.buffer, selStart, effDur);
+  }
+
+  function save() {
+    if (!LP.ui.state.buffer) return;
+    var index = LP.ui.state.activePad;
+    LP.audio.unlock();
+    LP.pads.assign(index, selStart, effDur, reqLen);
+    LP.pads.trigger(index);
+
+    dom.btnClearPad.hidden = false;
+    dom.editorHint.textContent = 'Drag to move, then save to overwrite this pad.';
+    LP.ui.setStatus('Saved to pad ' + (index + 1) + ' · ' +
+      effDur.toFixed(2) + 's from ' + selStart.toFixed(2) + 's');
+
+    var label = dom.btnSave.textContent;
+    dom.btnSave.textContent = 'Saved ✓';
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(function () { dom.btnSave.textContent = label; }, 900);
+  }
+
+  function clearActivePad() {
+    var index = LP.ui.state.activePad;
+    LP.pads.clear(index);
+    dom.btnClearPad.hidden = true;
+    dom.editorHint.textContent = 'Drag the highlighted window across the waveform.';
+    LP.ui.setStatus('Pad ' + (index + 1) + ' cleared');
+  }
+
+  function reset() {
+    selStart = 0;
+    effDur = Math.min(reqLen, 0);
+    curLeft = 0;
+    if (dom) {
+      dom.selWindow.style.transform = 'translateX(0px)';
+      dom.waveSel.style.transform = 'translateX(0px)';
+      dom.btnClearPad.hidden = true;
+    }
+  }
+
+  function persistPrefs() {
+    if (LP.app && LP.app.persist) LP.app.persist();
+  }
+
+  LP.editor = {
+    init: init,
+    layout: layout,
+    openPad: openPad,
+    preview: preview,
+    save: save,
+    reset: reset,
+    setLength: function (v) {
+      reqLen = nearestLength(v);
+      if (dom) dom.lenSelect.value = String(reqLen);
+    },
+    get length() { return reqLen; },
+    get selection() { return { start: selStart, duration: effDur }; }
+  };
+})(window.LP = window.LP || {});
+
+/* ============================================================
+   App / Event Handling
+   Wires recording, waveform, pads and editor together and owns
+   the top level flows: record → stop → decode → ready → reset.
+   ============================================================ */
+(function (LP) {
+  'use strict';
+
+  var dom, state;
+  var peaks = null;
+  var timerId = 0;
+  var resizeRaf = 0;
+  var selDirty = false;
+  var pendingRestore = null;   // bytes kept for a post-gesture decode retry
+
+  var IS_IOS = /iP(hone|od|ad)/.test(navigator.userAgent) ||
+    (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+  var WAVE_BASE = '#3b3b47';
+  var WAVE_SEL = '#35d9a0';
+
+  /* ── Boot ─────────────────────────────────────────────────── */
+
+  function init() {
+    LP.ui.init();
+    dom = LP.ui.dom;
+    state = LP.ui.state;
+
+    readThemeColors();
+    LP.pads.build(dom.padGrid);
+    LP.pads.initKeyboard();
+    LP.pads.onSelect = function (index) { LP.editor.openPad(index); };
+    LP.pads.onChange = persist;
+    LP.editor.init();
+
+    wireControls();
+    wireGlobal();
+
+    LP.ui.setMode('play');
+    LP.ui.setPhase('idle');
+    checkEnvironment();
+    applyViewportFallback();
+    restoreSession();
+  }
+
+  function readThemeColors() {
+    try {
+      var s = getComputedStyle(document.documentElement);
+      WAVE_SEL = (s.getPropertyValue('--accent') || WAVE_SEL).trim() || WAVE_SEL;
+      WAVE_BASE = (s.getPropertyValue('--wave-base') || WAVE_BASE).trim() || WAVE_BASE;
+    } catch (e) {}
+  }
+
+  /* Older iOS lacks dvh: drive the shell height from innerHeight. */
+  function applyViewportFallback() {
+    var supportsDvh = window.CSS && CSS.supports && CSS.supports('height', '100dvh');
+    if (supportsDvh) return;
+    var apply = function () { dom.app.style.height = window.innerHeight + 'px'; };
+    apply();
+    window.addEventListener('resize', apply);
+    window.addEventListener('orientationchange', apply);
+  }
+
+  function checkEnvironment() {
+    var secure = window.isSecureContext ||
+      location.protocol === 'https:' ||
+      location.hostname === 'localhost' ||
+      location.hostname === '127.0.0.1';
+
+    if (!secure) {
+      dom.secureBanner.hidden = false;
+      LP.ui.setBlocked('Microphone needs a secure https:// address');
+    } else if (!LP.recorder.supported || !LP.audio.supported) {
+      dom.secureBanner.hidden = false;
+      dom.secureBanner.querySelector('strong').textContent = 'Recording is not supported here.';
+      dom.secureBanner.querySelector('span').textContent =
+        'This browser cannot record audio. Try Safari on iPhone, or Chrome.';
+      LP.ui.setBlocked('This browser cannot record audio');
+    }
+  }
+
+  /* ── Event handling ───────────────────────────────────────── */
+
+  function wireControls() {
+    dom.btnRecord.addEventListener('click', onRecord);
+    dom.btnStop.addEventListener('click', onStop);
+    dom.btnNew.addEventListener('click', onNew);
+
+    dom.modePlay.addEventListener('click', function () { switchMode('play'); });
+    dom.modeCustomize.addEventListener('click', function () { switchMode('customize'); });
+  }
+
+  function wireGlobal() {
+    /* Capture phase: the context is resumed before any pad handler
+       runs, so the first tap after a suspend is not silent. */
+    document.addEventListener('pointerdown', function () { LP.audio.unlock(); }, true);
+    document.addEventListener('keydown', function () { LP.audio.unlock(); }, true);
+
+    document.addEventListener('visibilitychange', function () {
+      if (!document.hidden) LP.audio.unlock();
+    });
+
+    window.addEventListener('resize', scheduleRelayout);
+    window.addEventListener('orientationchange', scheduleRelayout);
+
+    /* Recording keeps running if the tab is hidden; warn on unload. */
+    window.addEventListener('beforeunload', function (e) {
+      if (!LP.recorder.isRecording) return;
+      e.preventDefault();
+      e.returnValue = '';
+    });
+  }
+
+  function scheduleRelayout() {
+    if (resizeRaf) return;
+    resizeRaf = requestAnimationFrame(function () {
+      resizeRaf = 0;
+      drawWaveforms();
+      LP.editor.layout();
+    });
+  }
+
+  function switchMode(mode) {
+    if (state.mode === mode) return;
+    LP.ui.setMode(mode);
+    if (mode === 'customize') {
+      /* The selection canvas has no size while hidden — redraw now. */
+      drawWaveforms();
+      if (state.buffer) LP.editor.openPad(state.activePad);
+      LP.pads.renderAll();
+    } else {
+      LP.pads.renderAll();
+    }
+    persist();
+  }
+
+  /* ── Recording flow ───────────────────────────────────────── */
+
+  function onRecord() {
+    LP.audio.unlock();
+    if (state.buffer) {
+      LP.ui.confirm({
+        title: 'Record again?',
+        body: 'The current recording and all 16 pads will be cleared first.',
+        confirmLabel: 'Record new'
+      }).then(function (ok) {
+        if (!ok) return;
+        resetAll(true);
+        startRecording();
+      });
+      return;
+    }
+    startRecording();
+  }
+
+  function startRecording() {
+    LP.ui.setPhase('permission');
+    LP.audio.micStarted();
+    LP.recorder.start(onTrackLost).then(function () {
+      LP.ui.setPhase('recording');
+      startTimer();
+    }).catch(function (err) {
+      stopTimer();
+      LP.ui.setPhase(micErrorPhase(err), micErrorMessage(err));
+    });
+  }
+
+  function onTrackLost() {
+    if (LP.recorder.isRecording) onStop();
+  }
+
+  function onStop() {
+    if (!LP.recorder.isRecording) return;
+    stopTimer();
+    LP.ui.setPhase('processing');
+
+    LP.recorder.stop().then(function (result) {
+      /* Mic released: hand the audio session back to playback so iOS
+         routes to the speaker instead of the earpiece. */
+      LP.audio.micReleased();
+      if (result.kind === 'pcm') {
+        var buf = LP.audio.bufferFromChunks(result.chunks, result.length, result.sampleRate);
+        if (!buf) throw new Error('empty-recording');
+        adoptBuffer(buf, null, null);
+        return null;
+      }
+      /* decodeAudioData detaches its input, so copy for storage first. */
+      var forStore = result.bytes.slice(0);
+      return LP.audio.decode(result.bytes).then(function (buf) {
+        adoptBuffer(buf, forStore, result.mime);
+      });
+    }).catch(function (err) {
+      var msg = (err && err.message === 'empty-recording')
+        ? 'Nothing was recorded — try again.'
+        : 'That recording could not be processed. Please try again.';
+      LP.ui.setPhase('error', msg);
+    });
+  }
+
+  function onNew() {
+    var recording = LP.recorder.isRecording;
+    LP.ui.confirm({
+      title: recording ? 'Discard this recording?' : 'Start over?',
+      body: 'This clears the recording and empties all 16 pads.',
+      confirmLabel: 'Clear all'
+    }).then(function (ok) {
+      if (ok) resetAll(false);
+    });
+  }
+
+  function startTimer() {
+    stopTimer();
+    dom.recTime.textContent = '0:00.0';
+    timerId = setInterval(function () {
+      dom.recTime.textContent = LP.ui.formatTime(LP.recorder.elapsed);
+    }, 100);
+  }
+
+  function stopTimer() {
+    if (timerId) { clearInterval(timerId); timerId = 0; }
+  }
+
+  function micErrorPhase(err) {
+    var name = err && err.name;
+    return (name === 'NotAllowedError' || name === 'SecurityError') ? 'denied' : 'error';
+  }
+
+  function micErrorMessage(err) {
+    switch (err && err.name) {
+      case 'NotAllowedError':
+      case 'SecurityError':
+        return 'Microphone blocked. Allow it in your browser settings, then try again.';
+      case 'NotFoundError':
+      case 'OverconstrainedError':
+        return 'No microphone found on this device.';
+      case 'NotReadableError':
+        return 'The microphone is busy in another app. Close it and try again.';
+      case 'NotSupportedError':
+        return 'This browser cannot record audio. Try Safari or Chrome.';
+      default:
+        return 'Could not start recording. Please try again.';
+    }
+  }
+
+  /* ── Recording ready ──────────────────────────────────────── */
+
+  function adoptBuffer(buffer, bytes, mime) {
+    state.buffer = buffer;
+    state.duration = buffer.duration;
+    peaks = LP.waveform.computePeaks(buffer);
+
+    dom.recTime.textContent = LP.ui.formatTime(buffer.duration);
+    LP.ui.setPhase('ready', 'Ready · ' + buffer.duration.toFixed(1) + 's recorded');
+    if (IS_IOS) {
+      LP.ui.showSoundHint('No sound? Flip the silent switch on the side of your iPhone and turn the volume up.');
+    }
+
+    drawWaveforms();
+    if (state.mode === 'customize') LP.editor.openPad(state.activePad);
+    else LP.editor.layout();
+
+    if (bytes) LP.storage.saveAudio(bytes, mime);
+    persist();
+  }
+
+  function drawWaveforms() {
+    if (!peaks) return;
+    var w = dom.waveWrap.clientWidth;
+    if (!w) return;
+
+    LP.waveform.draw(dom.waveBase, peaks, WAVE_BASE);
+
+    /* offsetParent is null while the selection is display:none. */
+    if (dom.selWindow.offsetParent === null) { selDirty = true; return; }
+    dom.waveSel.style.width = w + 'px';
+    LP.waveform.draw(dom.waveSel, peaks, WAVE_SEL);
+    selDirty = false;
+  }
+
+  function clearWaveforms() {
+    [dom.waveBase, dom.waveSel].forEach(function (c) {
+      var g = c.getContext('2d');
+      if (g) g.clearRect(0, 0, c.width, c.height);
+    });
+  }
+
+  /* ── Reset ────────────────────────────────────────────────── */
+
+  function resetAll(keepStorage) {
+    if (LP.recorder.isRecording) LP.audio.micReleased();
+    LP.recorder.cancel();
+    stopTimer();
+    LP.ui.hideSoundHint();
+
+    state.buffer = null;
+    state.duration = 0;
+    state.activePad = 0;
+    peaks = null;
+    pendingRestore = null;
+
+    LP.pads.clearAll();
+    LP.editor.reset();
+    clearWaveforms();
+
+    dom.recTime.textContent = '0:00.0';
+    dom.recTime.classList.remove('is-live');
+    LP.ui.setPhase('idle');
+    LP.pads.renderAll();
+
+    if (!keepStorage) LP.storage.clear();
+  }
+
+  /* ── Persistence ──────────────────────────────────────────── */
+
+  function persist() {
+    LP.storage.saveSession({
+      pads: LP.pads.serialize(),
+      prefs: { mode: state.mode, len: LP.editor.length }
+    });
+  }
+
+  function restoreSession() {
+    if (!LP.storage.available) return;
+
+    LP.storage.load().then(function (data) {
+      var session = data.session;
+      if (session && session.prefs) {
+        if (session.prefs.len) LP.editor.setLength(session.prefs.len);
+      }
+      if (!data.audio || !data.audio.bytes || !data.audio.bytes.byteLength) return;
+
+      LP.ui.setPhase('processing', 'Restoring your last recording…');
+      var mime = data.audio.mime;
+      var forStore = data.audio.bytes.slice(0);
+
+      LP.audio.decode(data.audio.bytes).then(function (buffer) {
+        finishRestore(buffer, session);
+      }).catch(function () {
+        /* Some engines refuse to decode before the first gesture —
+           keep the bytes and retry once the user touches the page. */
+        pendingRestore = { bytes: forStore, mime: mime, session: session };
+        LP.ui.setPhase('idle', 'Tap anywhere to restore your last recording');
+        document.addEventListener('pointerdown', retryRestore, { once: true });
+        document.addEventListener('keydown', retryRestore, { once: true });
+      });
+    });
+  }
+
+  function retryRestore() {
+    if (!pendingRestore) return;
+    var job = pendingRestore;
+    pendingRestore = null;
+    LP.ui.setPhase('processing', 'Restoring your last recording…');
+    LP.audio.decode(job.bytes).then(function (buffer) {
+      finishRestore(buffer, job.session);
+    }).catch(function () {
+      LP.storage.clear();
+      LP.ui.setPhase('idle');
+    });
+  }
+
+  function finishRestore(buffer, session) {
+    state.buffer = buffer;
+    state.duration = buffer.duration;
+    peaks = LP.waveform.computePeaks(buffer);
+
+    if (session && session.pads) LP.pads.restore(session.pads);
+    if (session && session.prefs && session.prefs.mode === 'customize') {
+      LP.ui.setMode('customize');
+    }
+
+    dom.recTime.textContent = LP.ui.formatTime(buffer.duration);
+    LP.ui.setPhase('ready', 'Restored · ' + buffer.duration.toFixed(1) + 's recorded');
+    drawWaveforms();
+    if (state.mode === 'customize') LP.editor.openPad(state.activePad);
+    else LP.editor.layout();
+  }
+
+  LP.app = { persist: persist, redraw: drawWaveforms };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})(window.LP = window.LP || {});
+</script>
 </body>
 </html>
