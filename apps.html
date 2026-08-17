@@ -147,11 +147,18 @@ dialog::backdrop{background:rgba(10,10,20,.44); -webkit-backdrop-filter:blur(3px
 .dlg p.hint{margin:0 0 20px; color:var(--muted); font-size:14px}
 label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin:0 0 6px}
 .field{margin-bottom:16px}
-input[type=text],input[type=url],input[type=password]{
+input[type=text],input[type=url],input[type=password],textarea{
   width:100%; font:inherit; font-size:15px; padding:11px 14px; color:var(--text);
   background:var(--surface-2); border:1px solid transparent; border-radius:12px;
 }
-input:focus{border-color:var(--accent); outline:none}
+textarea{resize:vertical; min-height:88px; line-height:1.45; display:block}
+#sendText{font-size:13px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; min-height:0}
+input:focus,textarea:focus{border-color:var(--accent); outline:none}
+.note{margin:6px 0 0; font-size:12.5px; color:var(--muted); line-height:1.4}
+.section{margin-top:22px; padding-top:20px; border-top:1px solid var(--border)}
+.section h3{margin:0 0 14px; font-size:15px; letter-spacing:-.01em}
+.wide{width:100%; justify-content:center}
+.dlg{max-height:82dvh; overflow-y:auto}
 .row{display:flex; gap:10px; align-items:center}
 .row .btn{flex:0 0 auto}
 .preview{width:56px; height:56px; border-radius:16px; background:var(--surface-2); overflow:hidden; display:grid; place-items:center; flex:0 0 auto}
@@ -180,6 +187,7 @@ input:focus{border-color:var(--accent); outline:none}
 
 <div class="adminbar" id="adminBar">
   <button class="btn btn-accent" id="addBtn" type="button">+ App hinzufügen</button>
+  <button class="btn btn-ghost" id="settingsBtn" type="button">Einstellungen</button>
   <button class="btn btn-ghost" id="exportBtn" type="button">Export</button>
   <button class="btn btn-ghost" id="importBtn" type="button">Import</button>
   <button class="btn btn-ghost" id="doneBtn" type="button">Fertig</button>
@@ -204,7 +212,7 @@ input:focus{border-color:var(--accent); outline:none}
 <dialog id="editDlg">
   <form method="dialog" class="dlg" id="editForm">
     <h2 id="editTitle">App bearbeiten</h2>
-    <p class="hint">Name, Bild und Link festlegen.</p>
+    <p class="hint">Name, Bild und Link festlegen – oder unten eine neue Seite von Claude bauen lassen.</p>
 
     <div class="field">
       <label for="fName">Name</label>
@@ -229,9 +237,68 @@ input:focus{border-color:var(--accent); outline:none}
       </div>
     </div>
 
+    <!-- Seite von Claude bauen lassen -->
+    <div class="section">
+      <h3>Seite von Claude bauen lassen</h3>
+
+      <div class="field">
+        <label for="fPath">Setup-URL</label>
+        <input id="fPath" type="text" placeholder="/meine-app" autocomplete="off" spellcheck="false" inputmode="url">
+        <p class="note" id="pathNote">Pfad auf deiner Domain. Wird automatisch als Link eingetragen.</p>
+      </div>
+
+      <div class="field">
+        <label for="fPrompt">Prompt</label>
+        <textarea id="fPrompt" rows="4" placeholder="Was soll die Seite können? z. B. „Eine Einkaufsliste, die ich abhaken kann, mit Plus-Knopf und dunklem Design.“"></textarea>
+      </div>
+
+      <button class="btn btn-accent wide" id="sendBtn" type="button">Prompt an Claude senden</button>
+    </div>
+
     <div class="actions">
       <button class="btn btn-ghost btn-danger spacer" id="deleteBtn" type="button">Löschen</button>
       <button class="btn btn-ghost" id="editCancel" type="button">Abbrechen</button>
+      <button class="btn btn-accent" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Prompt an Claude übergeben -->
+<dialog id="sendDlg">
+  <div class="dlg">
+    <h2>Prompt kopiert</h2>
+    <p class="hint" id="sendHint">Claude öffnen und im Eingabefeld einfügen – fertig.</p>
+
+    <textarea id="sendText" rows="7" readonly spellcheck="false"></textarea>
+    <p class="note" id="copyState"></p>
+
+    <div class="actions">
+      <button class="btn btn-ghost spacer" id="copyAgain" type="button">Nochmal kopieren</button>
+      <button class="btn btn-ghost" id="sendClose" type="button">Schließen</button>
+      <a class="btn btn-accent" id="openClaude" href="https://claude.ai/code" target="_blank" rel="noopener">Claude öffnen</a>
+    </div>
+  </div>
+</dialog>
+
+<!-- Einstellungen -->
+<dialog id="setDlg">
+  <form method="dialog" class="dlg" id="setForm">
+    <h2>Einstellungen</h2>
+    <p class="hint">Wird nur für den Claude-Prompt gebraucht.</p>
+
+    <div class="field">
+      <label for="sDomain">Domain</label>
+      <input id="sDomain" type="text" placeholder="https://meinedomain.de" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="field">
+      <label for="sRepo">GitHub-Repository</label>
+      <input id="sRepo" type="text" placeholder="benutzer/repo" autocomplete="off" spellcheck="false">
+      <p class="note">Leer lassen, wenn Claude die Datei nur zum Download geben soll.</p>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost" id="setCancel" type="button">Abbrechen</button>
       <button class="btn btn-accent" type="submit">Speichern</button>
     </div>
   </form>
@@ -243,8 +310,15 @@ input:focus{border-color:var(--accent); outline:none}
 (function(){
   "use strict";
 
-  var PASSWORD = "6713";
+  var PASSWORD  = "6713";
   var STORE_KEY = "appgrid.v1";
+  var SET_KEY   = "appgrid.settings.v1";
+
+  /* Voreinstellungen – im Admin-Bereich unter „Einstellungen“ änderbar. */
+  var DEFAULT_SETTINGS = {
+    domain: "",                       /* z. B. https://meinedomain.de */
+    repo:   "h24shf5c9w-create/Pad"   /* leer = Claude gibt die Datei nur zum Download */
+  };
 
   /* Farbverläufe für Apps ohne Bild – bunt, aber ruhig. */
   var GRADIENTS = [
@@ -254,11 +328,12 @@ input:focus{border-color:var(--accent); outline:none}
   ];
 
   var DEFAULT_APPS = [
-    { id: uid(), name: "Padlab", url: "https://example.com", img: "" },
-    { id: uid(), name: "Beispiel", url: "https://example.com", img: "" }
+    { id: uid(), name: "Padlab",   url: "https://example.com", img: "", path: "", prompt: "" },
+    { id: uid(), name: "Beispiel", url: "https://example.com", img: "", path: "", prompt: "" }
   ];
 
   var apps = load();
+  var settings = loadSettings();
   var isAdmin = false;
   var editingId = null;
   var editingIsNew = false;
@@ -274,10 +349,19 @@ input:focus{border-color:var(--accent); outline:none}
   var fName      = document.getElementById("fName");
   var fUrl       = document.getElementById("fUrl");
   var fImg       = document.getElementById("fImg");
+  var fPath      = document.getElementById("fPath");
+  var fPrompt    = document.getElementById("fPrompt");
+  var pathNote   = document.getElementById("pathNote");
   var imgPreview = document.getElementById("imgPreview");
   var fileInput  = document.getElementById("fileInput");
   var deleteBtn  = document.getElementById("deleteBtn");
   var importInput= document.getElementById("importInput");
+  var sendDlg    = document.getElementById("sendDlg");
+  var sendText   = document.getElementById("sendText");
+  var copyState  = document.getElementById("copyState");
+  var setDlg     = document.getElementById("setDlg");
+  var sDomain    = document.getElementById("sDomain");
+  var sRepo      = document.getElementById("sRepo");
 
   /* ── Speicher ────────────────────────────────────────────── */
   function uid(){ return Math.random().toString(36).slice(2,10); }
@@ -288,10 +372,33 @@ input:focus{border-color:var(--accent); outline:none}
       if(!raw) return DEFAULT_APPS.slice();
       var data = JSON.parse(raw);
       if(!data || !Array.isArray(data.apps)) return DEFAULT_APPS.slice();
-      return data.apps.map(function(a){
-        return { id: a.id || uid(), name: String(a.name||""), url: String(a.url||""), img: String(a.img||"") };
-      });
+      return data.apps.map(toApp);
     }catch(e){ return DEFAULT_APPS.slice(); }
+  }
+
+  function toApp(a){
+    return {
+      id:     a.id || uid(),
+      name:   String(a.name   || ""),
+      url:    String(a.url    || ""),
+      img:    String(a.img    || ""),
+      path:   String(a.path   || ""),
+      prompt: String(a.prompt || "")
+    };
+  }
+
+  function loadSettings(){
+    try{
+      var s = JSON.parse(localStorage.getItem(SET_KEY) || "{}");
+      return {
+        domain: typeof s.domain === "string" ? s.domain : DEFAULT_SETTINGS.domain,
+        repo:   typeof s.repo   === "string" ? s.repo   : DEFAULT_SETTINGS.repo
+      };
+    }catch(e){ return { domain: DEFAULT_SETTINGS.domain, repo: DEFAULT_SETTINGS.repo }; }
+  }
+
+  function saveSettings(){
+    try{ localStorage.setItem(SET_KEY, JSON.stringify(settings)); }catch(e){}
   }
 
   function save(){
@@ -468,9 +575,12 @@ input:focus{border-color:var(--accent); outline:none}
     editingIsNew = !!isNew;
     pendingImg = app.img || "";
     editTitle.textContent = "App bearbeiten";
-    fName.value = app.name || "";
-    fUrl.value  = app.url || "";
-    fImg.value  = /^data:/i.test(pendingImg) ? "" : pendingImg;
+    fName.value   = app.name || "";
+    fUrl.value    = app.url || "";
+    fImg.value    = /^data:/i.test(pendingImg) ? "" : pendingImg;
+    fPath.value   = app.path || "";
+    fPrompt.value = app.prompt || "";
+    updatePathNote();
     updatePreview();
     editDlg.showModal();
     setTimeout(function(){ fName.focus(); fName.select(); }, 40);
@@ -501,6 +611,148 @@ input:focus{border-color:var(--accent); outline:none}
 
   fName.addEventListener("input", function(){ if(!pendingImg) updatePreview(); });
   fImg.addEventListener("input", function(){ pendingImg = fImg.value.trim(); updatePreview(); });
+
+  /* ── Setup-URL ───────────────────────────────────────────── */
+  /* Pfad auf der eigenen Domain, z. B. "/wetter/". Er wird zugleich
+     der Link der Kachel, damit beides nicht auseinanderlaufen kann.  */
+  function normalizePath(v){
+    v = (v || "").trim();
+    if(!v) return "";
+    if(/^https?:\/\//i.test(v)){
+      try{ v = new URL(v).pathname; }catch(e){}
+    }
+    v = v.replace(/\s+/g, "-").replace(/\/{2,}/g, "/");
+    if(v.charAt(0) !== "/") v = "/" + v;
+    if(!/\.[a-z0-9]{2,5}$/i.test(v) && v.slice(-1) !== "/") v += "/";
+    return v;
+  }
+
+  function slug(name){
+    return (name || "app").toLowerCase()
+      .replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "app";
+  }
+
+  function joinUrl(domain, path){
+    return domain.replace(/\/+$/, "") + path;
+  }
+
+  /* Aus "/wetter/" wird die Datei "wetter/index.html" im Repository. */
+  function repoFile(path){
+    var p = path.replace(/^\/+/, "");
+    return /\.[a-z0-9]{2,5}$/i.test(p) ? p : p + "index.html";
+  }
+
+  function updatePathNote(){
+    var p = normalizePath(fPath.value);
+    if(!p){
+      pathNote.textContent = "Pfad auf deiner Domain. Wird automatisch als Link eingetragen.";
+      return;
+    }
+    pathNote.textContent = "Adresse: " + (settings.domain ? joinUrl(settings.domain, p) : p);
+  }
+
+  fPath.addEventListener("input", function(){
+    var p = normalizePath(fPath.value);
+    if(p) fUrl.value = p;
+    updatePathNote();
+  });
+
+  /* ── Prompt für Claude bauen ─────────────────────────────── */
+  function buildPrompt(app){
+    var path = app.path || "/" + slug(app.name) + "/";
+    var file = repoFile(path);
+    var L = [];
+
+    L.push("Baue eine neue Unterseite für meine Website.");
+    L.push("");
+    L.push("Name: " + (app.name || "Neue App"));
+    L.push("Pfad auf der Website: " + path);
+    if(settings.domain) L.push("Spätere Adresse: " + joinUrl(settings.domain, path));
+    if(settings.repo){
+      L.push("Repository: " + settings.repo);
+      L.push("Datei im Repository: " + file);
+    }
+    L.push("");
+    L.push("Das soll die Seite können:");
+    L.push(app.prompt);
+    L.push("");
+    L.push("Vorgaben:");
+    L.push("- Genau eine in sich geschlossene HTML-Datei: CSS und JavaScript inline, keine externen Bibliotheken, kein Build-Schritt, kein Backend.");
+    L.push("- Muss auf einfachem Webhosting (GoDaddy cPanel) laufen: hochladen und fertig.");
+    L.push("- Fürs iPhone optimiert: responsiv, große Tippflächen, helles und dunkles Design.");
+    L.push("- Design wie meine Startseite: minimalistisch, viel Weißraum, runde Ecken (20px), Systemschrift, dezente Farbverläufe, Akzentfarbe #5b5bf0.");
+    if(settings.repo) L.push("- Lege die Datei unter " + file + " an, committe und pushe sie.");
+    L.push("- Gib mir die fertige Datei außerdem zum Herunterladen – ich bin am iPhone.");
+    L.push("- Antworte kurz: fertige Adresse und was ich noch tun muss.");
+
+    return L.join("\n");
+  }
+
+  document.getElementById("sendBtn").addEventListener("click", function(){
+    var app = apps.find(function(a){ return a.id === editingId; });
+    if(!app) return;
+
+    if(!fPrompt.value.trim()){
+      alert("Schreib zuerst in das Prompt-Feld, was die Seite können soll.");
+      fPrompt.focus();
+      return;
+    }
+    if(!fPath.value.trim()) fPath.value = "/" + slug(fName.value);
+
+    writeForm(app);          /* Eingaben sichern, damit nichts verloren geht */
+    save();
+    fUrl.value = app.url;
+
+    var text = buildPrompt(app);
+    sendText.value = text;
+    copyState.textContent = "";
+    copy(text);
+
+    editDlg.close();
+    closeEdit();
+    sendDlg.showModal();
+  });
+
+  function copy(text){
+    function ok(){  copyState.textContent = "In die Zwischenablage kopiert."; }
+    function fail(){ copyState.textContent = "Automatisches Kopieren ging nicht – Text oben antippen, alles markieren und kopieren."; }
+
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(ok, function(){ legacy(); });
+    }else{
+      legacy();
+    }
+
+    function legacy(){
+      try{
+        sendText.removeAttribute("readonly");
+        sendText.select();
+        sendText.setSelectionRange(0, text.length);
+        var done = document.execCommand("copy");
+        sendText.setAttribute("readonly", "");
+        done ? ok() : fail();
+      }catch(e){ fail(); }
+    }
+  }
+
+  document.getElementById("copyAgain").addEventListener("click", function(){ copy(sendText.value); });
+  document.getElementById("sendClose").addEventListener("click", function(){ sendDlg.close(); });
+
+  /* ── Einstellungen ───────────────────────────────────────── */
+  document.getElementById("settingsBtn").addEventListener("click", function(){
+    sDomain.value = settings.domain;
+    sRepo.value   = settings.repo;
+    setDlg.showModal();
+  });
+
+  document.getElementById("setCancel").addEventListener("click", function(){ setDlg.close(); });
+
+  document.getElementById("setForm").addEventListener("submit", function(){
+    settings.domain = sDomain.value.trim().replace(/\/+$/, "");
+    settings.repo   = sRepo.value.trim().replace(/^https?:\/\/github\.com\//i, "").replace(/\.git$/i, "").replace(/\/+$/, "");
+    saveSettings();
+  });
 
   document.getElementById("clearImg").addEventListener("click", function(){
     pendingImg = ""; fImg.value = ""; updatePreview();
@@ -545,14 +797,18 @@ input:focus{border-color:var(--accent); outline:none}
   /* Speichern (auch per Enter-Taste) */
   document.getElementById("editForm").addEventListener("submit", function(){
     var idx = apps.findIndex(function(a){ return a.id === editingId; });
-    if(idx >= 0){
-      apps[idx].name = fName.value.trim() || "Ohne Namen";
-      apps[idx].url  = normalizeUrl(fUrl.value);
-      apps[idx].img  = pendingImg.trim();
-      save();
-    }
+    if(idx >= 0) { writeForm(apps[idx]); save(); }
     closeEdit();
   });
+
+  function writeForm(app){
+    app.name   = fName.value.trim() || "Ohne Namen";
+    app.url    = normalizeUrl(fUrl.value);
+    app.img    = pendingImg.trim();
+    app.path   = normalizePath(fPath.value);
+    app.prompt = fPrompt.value.trim();
+    return app;
+  }
 
   /* Abbrechen – eine gerade erst angelegte App wieder entfernen */
   document.getElementById("editCancel").addEventListener("click", function(){
@@ -605,9 +861,7 @@ input:focus{border-color:var(--accent); outline:none}
       try{
         var data = JSON.parse(reader.result);
         if(!data || !Array.isArray(data.apps)) throw new Error("Format");
-        apps = data.apps.map(function(a){
-          return { id: a.id || uid(), name: String(a.name||""), url: String(a.url||""), img: String(a.img||"") };
-        });
+        apps = data.apps.map(toApp);
         save(); render();
       }catch(e){
         alert("Diese Datei ist keine gültige apps.json.");
