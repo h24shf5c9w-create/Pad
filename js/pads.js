@@ -86,7 +86,7 @@
   function trigger(index) {
     var slot = slots[index];
     if (slot && LP.ui.state.buffer) {
-      LP.audio.play(LP.ui.state.buffer, slot.start, slot.duration);
+      LP.audio.play(LP.ui.state.buffer, slot.start, slot.duration, slot.vol);
     }
     flash(els[index]);
     /* Cosmetic, and only after the audio call. */
@@ -115,14 +115,23 @@
     if (onSelect) onSelect(index);
   }
 
-  function assign(index, start, duration, len) {
-    slots[index] = { start: start, duration: duration, len: len };
+  function assign(index, start, duration, len, vol) {
+    slots[index] = { start: start, duration: duration, len: len, vol: vol };
     render(index);
     if (onChange) onChange();
   }
 
   function clear(index) {
     slots[index] = null;
+    render(index);
+    if (onChange) onChange();
+  }
+
+  /* Volume is safe to change on a live pad — it does not redefine
+     the slice, so it applies immediately instead of needing a save. */
+  function setVolume(index, vol) {
+    if (!slots[index]) return;
+    slots[index].vol = vol;
     render(index);
     if (onChange) onChange();
   }
@@ -138,7 +147,8 @@
     for (var i = 0; i < COUNT; i++) {
       var s = list[i];
       slots[i] = (s && typeof s.start === 'number' && typeof s.duration === 'number')
-        ? { start: s.start, duration: s.duration, len: s.len || s.duration }
+        ? { start: s.start, duration: s.duration, len: s.len || s.duration,
+            vol: typeof s.vol === 'number' ? s.vol : LP.audio.DEFAULT_VOLUME }
         : null;
     }
     renderAll();
@@ -151,12 +161,18 @@
     var loaded = !!slot;
     var active = LP.ui.state.mode === 'customize' && LP.ui.state.activePad === index;
 
+    var muted = loaded && slot.vol === 0;
+
     el.classList.toggle('is-loaded', loaded);
     el.classList.toggle('is-active', active);
-    el.querySelector('.pad-len').textContent = loaded ? trimNum(slot.duration) + 's' : '';
+    el.classList.toggle('is-muted', muted);
+    el.querySelector('.pad-len').textContent =
+      loaded ? (muted ? 'muted' : trimNum(slot.duration) + 's') : '';
 
     var label = 'Pad ' + (index + 1) + ', ' +
-      (loaded ? trimNum(slot.duration) + ' second sample' : 'empty');
+      (loaded ? trimNum(slot.duration) + ' second sample at ' + slot.vol + ' percent volume'
+              : 'empty');
+    if (muted) label += ', muted';
     if (active) label += ', selected for editing';
     el.setAttribute('aria-label', label);
     el.setAttribute('aria-pressed', String(active));
@@ -172,7 +188,7 @@
 
   function serialize() {
     return slots.map(function (s) {
-      return s ? { start: s.start, duration: s.duration, len: s.len } : null;
+      return s ? { start: s.start, duration: s.duration, len: s.len, vol: s.vol } : null;
     });
   }
 
@@ -197,6 +213,7 @@
     trigger: trigger,
     select: select,
     assign: assign,
+    setVolume: setVolume,
     clear: clear,
     clearAll: clearAll,
     restore: restore,

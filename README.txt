@@ -26,7 +26,20 @@ PLAY       - Pad antippen spielt das Sample sofort ab.
 CUSTOMIZE  - Pad antippen waehlt es aus. Danach das
              markierte Fenster ueber die Waveform ziehen,
              Laenge waehlen (0.1 / 0.2 / 0.5 / 1 / 2 / 3 / 4 / 5 s),
-             Preview hoeren und "Save to pad" druecken.
+             Lautstaerke einstellen, Preview hoeren und
+             "Save to pad" druecken.
+
+LAUTSTAERKE
+- Jedes Pad hat einen eigenen Regler von 0 bis 100 Prozent.
+- Neue Pads starten bei 100 Prozent, also rund dreimal so laut
+  wie die reine Aufnahme. Das gleicht leise Handymikrofone aus.
+- 30 Prozent entspricht dem unverstaerkten Originalpegel.
+- 0 Prozent schaltet das Pad stumm; es wird dann als "muted"
+  angezeigt.
+- Bei einem bereits belegten Pad wirkt der Regler sofort, ohne
+  erneutes Speichern.
+- Ein sanfter Begrenzer verhindert hartes Uebersteuern, falls
+  die Aufnahme schon laut war.
 
 Am Desktop spielen die Tasten 1 2 3 4 / Q W E R / A S D F / Z X C V
 die 16 Pads.

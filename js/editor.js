@@ -13,6 +13,7 @@
   var dom = null;
   var selStart = 0;         // seconds
   var reqLen = 0.5;         // requested length from the dropdown
+  var volume = 100;         // percent; 30 reproduces the unamplified level
   var effDur = 0.5;         // clamped to the recording length
   var curLeft = 0;          // px
   var selPx = 0;
@@ -32,6 +33,16 @@
     dom.lenSelect.addEventListener('change', function () {
       reqLen = parseFloat(dom.lenSelect.value) || 0.5;
       layout(true);
+      persistPrefs();
+    });
+
+    dom.volSlider.addEventListener('input', function () {
+      setVolume(parseInt(dom.volSlider.value, 10));
+      /* Applies straight to a pad that already holds a sample, so
+         "louder" is one drag away instead of a drag plus a save. */
+      if (LP.pads.get(LP.ui.state.activePad)) {
+        LP.pads.setVolume(LP.ui.state.activePad, volume);
+      }
       persistPrefs();
     });
 
@@ -100,6 +111,13 @@
     curLeft = px;
     dom.selWindow.style.transform = 'translateX(' + px + 'px)';
     dom.waveSel.style.transform = 'translateX(' + (-px) + 'px)';
+  }
+
+  function setVolume(v) {
+    volume = Math.max(0, Math.min(100, isNaN(v) ? 100 : v));
+    dom.volValue.textContent = volume + '%';
+    dom.volSlider.style.setProperty('--fill', volume + '%');
+    if (dom.volSlider.value !== String(volume)) dom.volSlider.value = String(volume);
   }
 
   function updateReadout() {
@@ -199,6 +217,9 @@
       reqLen = nearestLength(slot.len || slot.duration);
       dom.lenSelect.value = String(reqLen);
       selStart = slot.start;
+      setVolume(typeof slot.vol === 'number' ? slot.vol : 100);
+    } else {
+      setVolume(volume);
     }
     dom.btnClearPad.hidden = !slot;
     dom.editorHint.textContent = slot
@@ -221,20 +242,20 @@
     if (!LP.ui.state.buffer) return;
     LP.audio.unlock();
     LP.audio.stopSource(previewSrc);
-    previewSrc = LP.audio.play(LP.ui.state.buffer, selStart, effDur);
+    previewSrc = LP.audio.play(LP.ui.state.buffer, selStart, effDur, volume);
   }
 
   function save() {
     if (!LP.ui.state.buffer) return;
     var index = LP.ui.state.activePad;
     LP.audio.unlock();
-    LP.pads.assign(index, selStart, effDur, reqLen);
+    LP.pads.assign(index, selStart, effDur, reqLen, volume);
     LP.pads.trigger(index);
 
     dom.btnClearPad.hidden = false;
     dom.editorHint.textContent = 'Drag to move, then save to overwrite this pad.';
     LP.ui.setStatus('Saved to pad ' + (index + 1) + ' · ' +
-      effDur.toFixed(2) + 's from ' + selStart.toFixed(2) + 's');
+      effDur.toFixed(2) + 's from ' + selStart.toFixed(2) + 's · ' + volume + '%');
 
     var label = dom.btnSave.textContent;
     dom.btnSave.textContent = 'Saved ✓';
@@ -276,7 +297,9 @@
       reqLen = nearestLength(v);
       if (dom) dom.lenSelect.value = String(reqLen);
     },
+    setVolume: function (v) { if (dom) setVolume(v); },
     get length() { return reqLen; },
+    get volume() { return volume; },
     get selection() { return { start: selStart, duration: effDur }; }
   };
 })(window.LP = window.LP || {});

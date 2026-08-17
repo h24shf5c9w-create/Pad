@@ -314,7 +314,7 @@
   function persist() {
     LP.storage.saveSession({
       pads: LP.pads.serialize(),
-      prefs: { mode: state.mode, len: LP.editor.length }
+      prefs: { mode: state.mode, len: LP.editor.length, vol: LP.editor.volume }
     });
   }
 
@@ -325,6 +325,7 @@
       var session = data.session;
       if (session && session.prefs) {
         if (session.prefs.len) LP.editor.setLength(session.prefs.len);
+        if (typeof session.prefs.vol === 'number') LP.editor.setVolume(session.prefs.vol);
       }
       if (!data.audio || !data.audio.bytes || !data.audio.bytes.byteLength) return;
 

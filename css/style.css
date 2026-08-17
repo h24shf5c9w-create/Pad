@@ -456,10 +456,64 @@ h1, h2, h3, p { margin: 0; }
 
 .editor-controls {
   display: grid;
-  grid-template-columns: minmax(96px, 1fr) auto minmax(120px, 1.1fr);
+  grid-template-columns: minmax(92px, 0.9fr) minmax(0, 1.1fr);
+  grid-template-areas:
+    "len  vol"
+    "prev save";
   gap: 8px;
   align-items: end;
   margin-top: 11px;
+}
+.field-len  { grid-area: len; }
+.field-vol  { grid-area: vol; }
+#btnPreview { grid-area: prev; }
+#btnSave    { grid-area: save; }
+
+.field-vol .field-label b { color: var(--accent); font-variant-numeric: tabular-nums; }
+
+/* Big, thumb-friendly range control. */
+.slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 42px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.slider:disabled { opacity: .4; }
+
+.slider::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right,
+    var(--accent) 0 var(--fill, 100%), var(--surface-3) var(--fill, 100%) 100%);
+  box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 26px; height: 26px;
+  margin-top: -10px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .5);
+}
+.slider::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right,
+    var(--accent) 0 var(--fill, 100%), var(--surface-3) var(--fill, 100%) 100%);
+  border: 1px solid var(--line-strong);
+}
+.slider::-moz-range-thumb {
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--surface);
 }
 
 .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
@@ -587,6 +641,9 @@ h1, h2, h3, p { margin: 0; }
   background: var(--accent);
 }
 
+.pad.is-muted { opacity: .55; }
+.pad.is-muted .pad-mark { background: var(--muted); }
+
 .pad.is-active {
   box-shadow: 0 0 0 2px var(--accent) inset;
   color: var(--accent);
@@ -677,13 +734,17 @@ h1, h2, h3, p { margin: 0; }
 /* Short phones (iPhone SE class): claw back enough vertical space that
    customize mode still fits without scrolling and pads stay >= 44px. */
 @media (max-height: 700px) {
-  :root { --wave-h: 72px; --pad-gap: 8px; }
-  .app { gap: 7px; }
-  .card { padding: 10px; }
+  :root { --wave-h: 62px; --pad-gap: 8px; }
+  .app { gap: 6px; }
+  .card { padding: 9px; }
   .btn { min-height: 46px; }
+  .btn-sm { min-height: 38px; }
+  .select { min-height: 38px; }
+  .slider { height: 36px; }
+  .slider::-webkit-slider-thumb { width: 24px; height: 24px; margin-top: -9px; }
   .rec-status { margin-bottom: 9px; }
-  .editor-controls { margin-top: 9px; }
-  .editor-foot { margin-top: 6px; }
+  .editor-controls { margin-top: 7px; gap: 7px; }
+  .editor-foot { margin-top: 5px; }
   .pad-section { min-height: 200px; }
   .app-foot { display: none; }
   .editor[data-mode="play"] { --wave-h: 56px; }

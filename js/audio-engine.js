@@ -16,6 +16,34 @@
   /* Short ramp on both ends so slicing mid-waveform doesn't click. */
   var FADE = 0.004;
 
+  /* Volume scale: pads are set in percent, and 30 % reproduces the
+     original 1:1 level, so 100 % is roughly 3.3x louder. Phone mic
+     recordings are quiet, which is what the headroom is for. */
+  var REFERENCE_PERCENT = 30;
+  var DEFAULT_VOLUME = 100;
+
+  function gainFor(volume) {
+    var v = (volume === undefined || volume === null) ? DEFAULT_VOLUME : volume;
+    if (!(v > 0)) return 0;
+    return (v > 100 ? 100 : v) / REFERENCE_PERCENT;
+  }
+
+  /* Zero-latency safety net for the boosted signal: transparent below
+     0.7, then a soft knee, so a loud recording saturates gently
+     instead of wrapping into harsh digital clipping. A compressor
+     would add lookahead latency, which pads cannot afford. */
+  function softClipCurve() {
+    var n = 2048, curve = new Float32Array(n), knee = 0.7;
+    for (var i = 0; i < n; i++) {
+      var x = (i * 2) / (n - 1) - 1;
+      var a = Math.abs(x);
+      curve[i] = a <= knee
+        ? x
+        : (x < 0 ? -1 : 1) * (knee + (1 - knee) * Math.tanh((a - knee) / (1 - knee)));
+    }
+    return curve;
+  }
+
   /* ── iOS output routing ───────────────────────────────────────
      Two things silence Web Audio on an iPhone even when everything
      else is correct:
@@ -95,7 +123,13 @@
     }
     master = ctx.createGain();
     master.gain.value = 1;
-    master.connect(ctx.destination);
+
+    var limiter = ctx.createWaveShaper();
+    limiter.curve = softClipCurve();
+    limiter.oversample = 'none';        // oversampling would add latency
+
+    master.connect(limiter);
+    limiter.connect(ctx.destination);
     return ctx;
   }
 
@@ -141,9 +175,11 @@
   }
 
   /* Fire and forget. Returns the source so callers (preview) can stop it. */
-  function play(buffer, startTime, duration) {
+  function play(buffer, startTime, duration, volume) {
     var c = ctx;
     if (!c || !buffer) return null;
+    var level = gainFor(volume);
+    if (level <= 0) return null;
     /* Never await here — a resumed-but-not-yet-running context still
        schedules correctly, and awaiting would add a frame of latency. */
     if (c.state === 'suspended' && c.resume) c.resume().catch(function () {});
@@ -160,8 +196,8 @@
 
     var g = c.createGain();
     g.gain.setValueAtTime(0, t);
-    g.gain.linearRampToValueAtTime(1, t + fade);
-    g.gain.setValueAtTime(1, t + dur - fade);
+    g.gain.linearRampToValueAtTime(level, t + fade);
+    g.gain.setValueAtTime(level, t + dur - fade);
     g.gain.linearRampToValueAtTime(0, t + dur);
 
     src.connect(g);
@@ -211,6 +247,8 @@
     play: play,
     stopSource: stopSource,
     bufferFromChunks: bufferFromChunks,
+    gainFor: gainFor,
+    DEFAULT_VOLUME: DEFAULT_VOLUME,
     get sampleRate() { return ctx ? ctx.sampleRate : 44100; },
     get state() { return ctx ? ctx.state : 'none'; },
     supported: !!(window.AudioContext || window.webkitAudioContext)

@@ -35,6 +35,7 @@
       'editor', 'editorPadLabel', 'editorRange', 'waveWrap', 'waveBase',
       'waveSel', 'selWindow', 'waveEmpty', 'editorControls', 'lenSelect',
       'btnPreview', 'btnSave', 'btnClearPad', 'editorHint', 'padGrid',
+      'volSlider', 'volValue',
       'footHint', 'modal', 'modalBackdrop', 'modalTitle', 'modalBody',
       'modalCancel', 'modalConfirm', 'soundHint', 'soundHintText', 'soundHintClose'
     ].forEach(function (id) { dom[id] = document.getElementById(id); });
@@ -119,6 +120,7 @@
 
     var disabled = !hasAudio;
     dom.lenSelect.disabled = disabled;
+    dom.volSlider.disabled = disabled;
     dom.btnPreview.disabled = disabled;
     dom.btnSave.disabled = disabled;
 
