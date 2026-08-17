@@ -1,0 +1,624 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Meine Apps – alles auf einer Seite.">
+<title>Apps</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%235b5bf0'/%3E%3Cg fill='%23fff'%3E%3Crect x='16' y='16' width='13' height='13' rx='4'/%3E%3Crect x='35' y='16' width='13' height='13' rx='4'/%3E%3Crect x='16' y='35' width='13' height='13' rx='4'/%3E%3Crect x='35' y='35' width='13' height='13' rx='4'/%3E%3C/g%3E%3C/svg%3E">
+
+<style>
+/* ── Design-Tokens ─────────────────────────────────────────── */
+:root{
+  --bg:#f6f6fa;
+  --bg-glow-1:rgba(99,102,241,.18);
+  --bg-glow-2:rgba(236,72,153,.14);
+  --surface:#ffffff;
+  --surface-2:#f1f1f7;
+  --border:rgba(20,20,35,.10);
+  --text:#15151f;
+  --muted:#6d6d80;
+  --accent:#5b5bf0;
+  --accent-soft:rgba(91,91,240,.10);
+  --danger:#e0345c;
+  --shadow:0 1px 2px rgba(20,20,45,.06), 0 12px 28px -12px rgba(20,20,45,.18);
+  --shadow-lift:0 2px 4px rgba(20,20,45,.07), 0 22px 40px -16px rgba(20,20,45,.28);
+  --radius:20px;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0d0d12;
+    --bg-glow-1:rgba(99,102,241,.22);
+    --bg-glow-2:rgba(236,72,153,.16);
+    --surface:#17171f;
+    --surface-2:#1f1f2a;
+    --border:rgba(255,255,255,.10);
+    --text:#f2f2f7;
+    --muted:#9a9aae;
+    --accent:#8b8bff;
+    --accent-soft:rgba(139,139,255,.14);
+    --danger:#ff5c7c;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 12px 28px -14px rgba(0,0,0,.7);
+    --shadow-lift:0 2px 6px rgba(0,0,0,.5), 0 24px 44px -18px rgba(0,0,0,.8);
+  }
+}
+
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  min-height:100dvh;
+  background:var(--bg);
+  color:var(--text);
+  font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+  -webkit-tap-highlight-color:transparent;
+}
+body::before{
+  content:"";
+  position:fixed; inset:-14vmax -8vmax auto -8vmax; height:64vmax;
+  background:
+    radial-gradient(36vmax 26vmax at 18% 30%, var(--bg-glow-1), transparent 70%),
+    radial-gradient(32vmax 24vmax at 84% 16%, var(--bg-glow-2), transparent 70%);
+  pointer-events:none; z-index:0;
+}
+.wrap{position:relative; z-index:1; max-width:1080px; margin:0 auto; padding:clamp(24px,5vw,56px) clamp(16px,4vw,32px) 96px}
+
+/* ── Kopfbereich ───────────────────────────────────────────── */
+.top{display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:clamp(24px,4vw,40px)}
+h1{margin:0; font-size:clamp(28px,5vw,40px); letter-spacing:-.03em; font-weight:700}
+.sub{margin:6px 0 0; color:var(--muted); font-size:15px}
+
+.btn{
+  appearance:none; border:1px solid var(--border); background:var(--surface); color:var(--text);
+  font:inherit; font-size:14px; font-weight:600; padding:10px 16px; border-radius:999px;
+  cursor:pointer; box-shadow:var(--shadow); transition:transform .12s ease, box-shadow .12s ease, background .12s ease;
+  display:inline-flex; align-items:center; gap:8px; white-space:nowrap;
+}
+.btn:hover{transform:translateY(-1px); box-shadow:var(--shadow-lift)}
+.btn:active{transform:translateY(0)}
+.btn-accent{background:var(--accent); border-color:transparent; color:#fff}
+.btn-ghost{background:transparent; box-shadow:none}
+.btn-ghost:hover{background:var(--surface-2); box-shadow:none}
+.btn-danger{color:var(--danger)}
+.btn:focus-visible, a:focus-visible, input:focus-visible{outline:2px solid var(--accent); outline-offset:3px}
+
+/* ── App-Raster ────────────────────────────────────────────── */
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(112px,1fr));
+  gap:clamp(16px,3vw,28px) clamp(12px,2.5vw,22px);
+}
+.app{
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  text-decoration:none; color:inherit; padding:6px 2px; border-radius:var(--radius);
+}
+.icon{
+  width:clamp(64px,16vw,84px); aspect-ratio:1; border-radius:24%;
+  background:var(--surface-2); box-shadow:var(--shadow);
+  display:grid; place-items:center; overflow:hidden;
+  transition:transform .16s cubic-bezier(.2,.8,.3,1), box-shadow .16s ease;
+}
+.icon img{width:100%; height:100%; object-fit:cover; display:block}
+.icon span{font-size:clamp(24px,6vw,32px); font-weight:700; color:#fff; letter-spacing:-.02em}
+.app:hover .icon{transform:translateY(-4px) scale(1.03); box-shadow:var(--shadow-lift)}
+.app:active .icon{transform:translateY(-1px) scale(.98)}
+.name{
+  font-size:13.5px; font-weight:500; text-align:center; line-height:1.3;
+  max-width:100%; overflow-wrap:anywhere;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+}
+
+/* ── Admin-Modus ───────────────────────────────────────────── */
+body.admin .app{cursor:grab}
+body.admin .app.dragging{opacity:.4}
+body.admin .app::after{
+  content:"✎"; position:absolute; top:-2px;
+  right:calc(50% - clamp(64px,16vw,84px) / 2 - 8px);
+  width:26px; height:26px; border-radius:50%; background:var(--accent); color:#fff;
+  display:grid; place-items:center; font-size:13px; box-shadow:var(--shadow);
+}
+.adminbar{
+  position:fixed; left:50%; bottom:18px; transform:translateX(-50%);
+  display:none; gap:8px; padding:8px; z-index:20;
+  background:var(--surface);
+  background:color-mix(in srgb, var(--surface) 86%, transparent);
+  -webkit-backdrop-filter:blur(14px); backdrop-filter:blur(14px);
+  border:1px solid var(--border); border-radius:999px; box-shadow:var(--shadow-lift);
+  max-width:calc(100vw - 24px); overflow-x:auto;
+}
+body.admin .adminbar{display:flex}
+body.admin .top-admin-btn{background:var(--accent-soft); border-color:transparent; color:var(--accent)}
+
+.empty{
+  grid-column:1/-1; text-align:center; color:var(--muted);
+  border:1.5px dashed var(--border); border-radius:var(--radius); padding:48px 20px;
+}
+
+/* ── Dialoge ───────────────────────────────────────────────── */
+dialog{
+  border:1px solid var(--border); border-radius:24px; padding:0; width:min(440px,calc(100vw - 32px));
+  background:var(--surface); color:var(--text); box-shadow:var(--shadow-lift);
+}
+dialog::backdrop{background:rgba(10,10,20,.44); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px)}
+.dlg{padding:26px}
+.dlg h2{margin:0 0 4px; font-size:20px; letter-spacing:-.02em}
+.dlg p.hint{margin:0 0 20px; color:var(--muted); font-size:14px}
+label{display:block; font-size:13px; font-weight:600; color:var(--muted); margin:0 0 6px}
+.field{margin-bottom:16px}
+input[type=text],input[type=url],input[type=password]{
+  width:100%; font:inherit; font-size:15px; padding:11px 14px; color:var(--text);
+  background:var(--surface-2); border:1px solid transparent; border-radius:12px;
+}
+input:focus{border-color:var(--accent); outline:none}
+.row{display:flex; gap:10px; align-items:center}
+.row .btn{flex:0 0 auto}
+.preview{width:56px; height:56px; border-radius:16px; background:var(--surface-2); overflow:hidden; display:grid; place-items:center; flex:0 0 auto}
+.preview img{width:100%; height:100%; object-fit:cover}
+.preview span{font-size:22px; font-weight:700; color:#fff}
+.actions{display:flex; gap:10px; justify-content:flex-end; margin-top:24px; flex-wrap:wrap}
+.actions .spacer{margin-right:auto}
+.pw{letter-spacing:.4em; text-align:center; font-size:22px}
+.err{color:var(--danger); font-size:13.5px; min-height:20px; margin:8px 0 0; text-align:center}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1 id="pageTitle">Apps</h1>
+      <p class="sub" id="pageSub">Alles an einem Ort.</p>
+    </div>
+    <button class="btn top-admin-btn" id="adminBtn" type="button">Admin</button>
+  </header>
+
+  <main class="grid" id="grid"></main>
+</div>
+
+<div class="adminbar" id="adminBar">
+  <button class="btn btn-accent" id="addBtn" type="button">+ App hinzufügen</button>
+  <button class="btn btn-ghost" id="exportBtn" type="button">Export</button>
+  <button class="btn btn-ghost" id="importBtn" type="button">Import</button>
+  <button class="btn btn-ghost" id="doneBtn" type="button">Fertig</button>
+</div>
+
+<!-- Passwort -->
+<dialog id="pwDlg">
+  <form method="dialog" class="dlg" id="pwForm">
+    <h2>Admin-Bereich</h2>
+    <p class="hint">Passwort eingeben, um Apps zu bearbeiten.</p>
+    <label class="sr" for="pwInput">Passwort</label>
+    <input class="pw" id="pwInput" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="••••">
+    <p class="err" id="pwErr"></p>
+    <div class="actions">
+      <button class="btn btn-ghost" id="pwCancel" type="button">Abbrechen</button>
+      <button class="btn btn-accent" type="submit">Öffnen</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- App bearbeiten -->
+<dialog id="editDlg">
+  <form method="dialog" class="dlg" id="editForm">
+    <h2 id="editTitle">App bearbeiten</h2>
+    <p class="hint">Name, Bild und Link festlegen.</p>
+
+    <div class="field">
+      <label for="fName">Name</label>
+      <input id="fName" type="text" placeholder="z. B. Padlab" autocomplete="off">
+    </div>
+
+    <div class="field">
+      <label for="fUrl">Link</label>
+      <input id="fUrl" type="text" placeholder="https://beispiel.de" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="field">
+      <label for="fImg">Bild</label>
+      <div class="row">
+        <div class="preview" id="imgPreview"></div>
+        <input id="fImg" type="text" placeholder="Bild-URL oder leer lassen" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="row" style="margin-top:10px">
+        <button class="btn btn-ghost" id="pickFile" type="button">Datei wählen…</button>
+        <button class="btn btn-ghost" id="clearImg" type="button">Bild entfernen</button>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-ghost btn-danger spacer" id="deleteBtn" type="button">Löschen</button>
+      <button class="btn btn-ghost" id="editCancel" type="button">Abbrechen</button>
+      <button class="btn btn-accent" type="submit">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<input id="importInput" type="file" accept="application/json,.json" hidden>
+
+<script>
+(function(){
+  "use strict";
+
+  var PASSWORD = "6713";
+  var STORE_KEY = "appgrid.v1";
+
+  /* Farbverläufe für Apps ohne Bild – bunt, aber ruhig. */
+  var GRADIENTS = [
+    ["#6366f1","#8b5cf6"], ["#0ea5e9","#6366f1"], ["#06b6d4","#3b82f6"],
+    ["#10b981","#059669"], ["#f59e0b","#f43f5e"], ["#ec4899","#8b5cf6"],
+    ["#14b8a6","#22c55e"], ["#fb7185","#f59e0b"]
+  ];
+
+  var DEFAULT_APPS = [
+    { id: uid(), name: "Padlab", url: "https://example.com", img: "" },
+    { id: uid(), name: "Beispiel", url: "https://example.com", img: "" }
+  ];
+
+  var apps = load();
+  var isAdmin = false;
+  var editingId = null;
+  var editingIsNew = false;
+  var pendingImg = "";
+
+  var grid       = document.getElementById("grid");
+  var adminBtn   = document.getElementById("adminBtn");
+  var pwDlg      = document.getElementById("pwDlg");
+  var pwInput    = document.getElementById("pwInput");
+  var pwErr      = document.getElementById("pwErr");
+  var editDlg    = document.getElementById("editDlg");
+  var editTitle  = document.getElementById("editTitle");
+  var fName      = document.getElementById("fName");
+  var fUrl       = document.getElementById("fUrl");
+  var fImg       = document.getElementById("fImg");
+  var imgPreview = document.getElementById("imgPreview");
+  var fileInput  = document.getElementById("fileInput");
+  var deleteBtn  = document.getElementById("deleteBtn");
+  var importInput= document.getElementById("importInput");
+
+  /* ── Speicher ────────────────────────────────────────────── */
+  function uid(){ return Math.random().toString(36).slice(2,10); }
+
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORE_KEY);
+      if(!raw) return DEFAULT_APPS.slice();
+      var data = JSON.parse(raw);
+      if(!data || !Array.isArray(data.apps)) return DEFAULT_APPS.slice();
+      return data.apps.map(function(a){
+        return { id: a.id || uid(), name: String(a.name||""), url: String(a.url||""), img: String(a.img||"") };
+      });
+    }catch(e){ return DEFAULT_APPS.slice(); }
+  }
+
+  function save(){
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify({ v:1, apps: apps }));
+    }catch(e){
+      alert("Speichern fehlgeschlagen – der Browser-Speicher ist voll. Nutze kleinere Bilder oder Bild-URLs statt hochgeladener Dateien.");
+    }
+  }
+
+  /* ── Hilfen ──────────────────────────────────────────────── */
+  function gradientFor(name){
+    var s = 0, i;
+    for(i=0;i<name.length;i++) s = (s*31 + name.charCodeAt(i)) >>> 0;
+    return GRADIENTS[s % GRADIENTS.length];
+  }
+
+  function normalizeUrl(u){
+    u = (u||"").trim();
+    if(!u) return "";
+    if(/^(https?:|mailto:|tel:|\/|\.\/|#)/i.test(u)) return u;
+    return "https://" + u;
+  }
+
+  function safeUrl(u){
+    u = normalizeUrl(u);
+    return /^javascript:/i.test(u) ? "" : u;
+  }
+
+  function safeImg(u){
+    u = (u||"").trim();
+    if(!u) return "";
+    if(/^(https?:\/\/|data:image\/|\/|\.\/)/i.test(u)) return u;
+    return "https://" + u;
+  }
+
+  function fillIcon(el, app){
+    el.innerHTML = "";
+    var src = safeImg(app.img);
+    if(src){
+      var img = document.createElement("img");
+      img.src = src;
+      img.alt = "";
+      img.loading = "lazy";
+      img.onerror = function(){ el.innerHTML = ""; letterInto(el, app); };
+      el.style.background = "var(--surface-2)";
+      el.appendChild(img);
+    }else{
+      letterInto(el, app);
+    }
+  }
+
+  function letterInto(el, app){
+    var g = gradientFor(app.name || "?");
+    el.style.background = "linear-gradient(140deg," + g[0] + "," + g[1] + ")";
+    var s = document.createElement("span");
+    s.textContent = (app.name || "?").trim().charAt(0).toUpperCase() || "?";
+    el.appendChild(s);
+  }
+
+  /* ── Rendern ─────────────────────────────────────────────── */
+  function render(){
+    grid.innerHTML = "";
+
+    if(!apps.length){
+      var e = document.createElement("p");
+      e.className = "empty";
+      e.textContent = isAdmin ? "Noch keine Apps – unten auf „+ App hinzufügen“ tippen."
+                              : "Hier sind noch keine Apps.";
+      grid.appendChild(e);
+      return;
+    }
+
+    apps.forEach(function(app){
+      var node = document.createElement("a");
+      node.className = "app";
+      node.dataset.id = app.id;
+      node.href = safeUrl(app.url) || "#";
+      if(!isAdmin && /^https?:/i.test(node.href)){
+        node.target = "_blank";
+        node.rel = "noopener noreferrer";
+      }
+
+      var icon = document.createElement("div");
+      icon.className = "icon";
+      fillIcon(icon, app);
+
+      var name = document.createElement("div");
+      name.className = "name";
+      name.textContent = app.name || "Ohne Namen";
+
+      node.appendChild(icon);
+      node.appendChild(name);
+
+      if(isAdmin){
+        node.setAttribute("draggable","true");
+        node.addEventListener("click", function(ev){ ev.preventDefault(); openEdit(app.id); });
+        node.addEventListener("dragstart", onDragStart);
+        node.addEventListener("dragover",  onDragOver);
+        node.addEventListener("drop",      onDrop);
+        node.addEventListener("dragend",   onDragEnd);
+      }
+
+      grid.appendChild(node);
+    });
+  }
+
+  /* ── Reihenfolge per Drag & Drop ─────────────────────────── */
+  var dragId = null;
+
+  function onDragStart(ev){
+    dragId = this.dataset.id;
+    this.classList.add("dragging");
+    ev.dataTransfer.effectAllowed = "move";
+    try{ ev.dataTransfer.setData("text/plain", dragId); }catch(e){}
+  }
+  function onDragOver(ev){ ev.preventDefault(); ev.dataTransfer.dropEffect = "move"; }
+  function onDragEnd(){ this.classList.remove("dragging"); dragId = null; }
+  function onDrop(ev){
+    ev.preventDefault();
+    var targetId = this.dataset.id;
+    if(!dragId || dragId === targetId) return;
+    var from = apps.findIndex(function(a){ return a.id === dragId; });
+    var to   = apps.findIndex(function(a){ return a.id === targetId; });
+    if(from < 0 || to < 0) return;
+    apps.splice(to, 0, apps.splice(from, 1)[0]);
+    save(); render();
+  }
+
+  /* ── Admin an/aus ────────────────────────────────────────── */
+  adminBtn.addEventListener("click", function(){
+    if(isAdmin){ setAdmin(false); return; }
+    pwErr.textContent = "";
+    pwInput.value = "";
+    pwDlg.showModal();
+    setTimeout(function(){ pwInput.focus(); }, 40);
+  });
+
+  document.getElementById("pwCancel").addEventListener("click", function(){ pwDlg.close(); });
+
+  document.getElementById("pwForm").addEventListener("submit", function(ev){
+    if(pwInput.value.trim() !== PASSWORD){
+      ev.preventDefault();
+      pwErr.textContent = "Falsches Passwort.";
+      pwInput.value = "";
+      pwInput.focus();
+      return;
+    }
+    setAdmin(true);
+  });
+
+  function setAdmin(on){
+    isAdmin = on;
+    document.body.classList.toggle("admin", on);
+    adminBtn.textContent = on ? "Admin beenden" : "Admin";
+    render();
+  }
+
+  document.getElementById("doneBtn").addEventListener("click", function(){ setAdmin(false); });
+
+  /* ── App bearbeiten / hinzufügen ─────────────────────────── */
+  document.getElementById("addBtn").addEventListener("click", function(){
+    var app = { id: uid(), name: "Neue App", url: "", img: "" };
+    apps.push(app);
+    save(); render();
+    window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
+    openEdit(app.id, true);
+  });
+
+  function openEdit(id, isNew){
+    var app = apps.find(function(a){ return a.id === id; });
+    if(!app) return;
+    editingId = id;
+    editingIsNew = !!isNew;
+    pendingImg = app.img || "";
+    editTitle.textContent = "App bearbeiten";
+    fName.value = app.name || "";
+    fUrl.value  = app.url || "";
+    fImg.value  = /^data:/i.test(pendingImg) ? "" : pendingImg;
+    updatePreview();
+    editDlg.showModal();
+    setTimeout(function(){ fName.focus(); fName.select(); }, 40);
+  }
+
+  function updatePreview(){
+    imgPreview.innerHTML = "";
+    var src = safeImg(pendingImg);
+    if(src){
+      var img = document.createElement("img");
+      img.src = src; img.alt = "";
+      img.onerror = function(){ imgPreview.innerHTML = ""; previewLetter(); };
+      imgPreview.style.background = "var(--surface-2)";
+      imgPreview.appendChild(img);
+    }else{
+      previewLetter();
+    }
+  }
+
+  function previewLetter(){
+    var n = fName.value || "?";
+    var g = gradientFor(n);
+    imgPreview.style.background = "linear-gradient(140deg," + g[0] + "," + g[1] + ")";
+    var s = document.createElement("span");
+    s.textContent = n.trim().charAt(0).toUpperCase() || "?";
+    imgPreview.appendChild(s);
+  }
+
+  fName.addEventListener("input", function(){ if(!pendingImg) updatePreview(); });
+  fImg.addEventListener("input", function(){ pendingImg = fImg.value.trim(); updatePreview(); });
+
+  document.getElementById("clearImg").addEventListener("click", function(){
+    pendingImg = ""; fImg.value = ""; updatePreview();
+  });
+
+  document.getElementById("pickFile").addEventListener("click", function(){ fileInput.click(); });
+
+  fileInput.addEventListener("change", function(){
+    var file = fileInput.files && fileInput.files[0];
+    fileInput.value = "";
+    if(!file) return;
+    shrink(file, 256, function(dataUrl){
+      pendingImg = dataUrl;
+      fImg.value = "";
+      updatePreview();
+    });
+  });
+
+  /* Bild auf Icon-Größe verkleinern, damit der Speicher nicht überläuft. */
+  function shrink(file, max, done){
+    var reader = new FileReader();
+    reader.onload = function(){
+      var img = new Image();
+      img.onload = function(){
+        var w = img.width, h = img.height, scale = Math.min(1, max / Math.max(w, h));
+        var c = document.createElement("canvas");
+        c.width  = Math.max(1, Math.round(w * scale));
+        c.height = Math.max(1, Math.round(h * scale));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        var out;
+        try{ out = c.toDataURL("image/webp", .88); }catch(e){ out = ""; }
+        if(!out || out.indexOf("data:image/webp") !== 0) out = c.toDataURL("image/png");
+        done(out);
+      };
+      img.onerror = function(){ alert("Bild konnte nicht gelesen werden."); };
+      img.src = reader.result;
+    };
+    reader.onerror = function(){ alert("Datei konnte nicht gelesen werden."); };
+    reader.readAsDataURL(file);
+  }
+
+  /* Speichern (auch per Enter-Taste) */
+  document.getElementById("editForm").addEventListener("submit", function(){
+    var idx = apps.findIndex(function(a){ return a.id === editingId; });
+    if(idx >= 0){
+      apps[idx].name = fName.value.trim() || "Ohne Namen";
+      apps[idx].url  = normalizeUrl(fUrl.value);
+      apps[idx].img  = pendingImg.trim();
+      save();
+    }
+    closeEdit();
+  });
+
+  /* Abbrechen – eine gerade erst angelegte App wieder entfernen */
+  document.getElementById("editCancel").addEventListener("click", function(){
+    if(editingIsNew) removeApp(editingId);
+    editDlg.close();
+    closeEdit();
+  });
+  editDlg.addEventListener("cancel", function(){          /* ESC */
+    if(editingIsNew) removeApp(editingId);
+    setTimeout(closeEdit, 0);
+  });
+
+  deleteBtn.addEventListener("click", function(){
+    var app = apps.find(function(a){ return a.id === editingId; });
+    if(app && !editingIsNew && !confirm("„" + (app.name || "Diese App") + "“ wirklich löschen?")) return;
+    removeApp(editingId);
+    editDlg.close();
+    closeEdit();
+  });
+
+  function removeApp(id){
+    var idx = apps.findIndex(function(a){ return a.id === id; });
+    if(idx >= 0){ apps.splice(idx, 1); save(); }
+  }
+
+  function closeEdit(){
+    editingId = null;
+    editingIsNew = false;
+    render();
+  }
+
+  /* ── Export / Import ─────────────────────────────────────── */
+  document.getElementById("exportBtn").addEventListener("click", function(){
+    var blob = new Blob([JSON.stringify({ v:1, apps: apps }, null, 2)], { type:"application/json" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "apps.json";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  document.getElementById("importBtn").addEventListener("click", function(){ importInput.click(); });
+
+  importInput.addEventListener("change", function(){
+    var file = importInput.files && importInput.files[0];
+    importInput.value = "";
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      try{
+        var data = JSON.parse(reader.result);
+        if(!data || !Array.isArray(data.apps)) throw new Error("Format");
+        apps = data.apps.map(function(a){
+          return { id: a.id || uid(), name: String(a.name||""), url: String(a.url||""), img: String(a.img||"") };
+        });
+        save(); render();
+      }catch(e){
+        alert("Diese Datei ist keine gültige apps.json.");
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  /* ── Start ───────────────────────────────────────────────── */
+  render();
+})();
+</script>
+</body>
+</html>
